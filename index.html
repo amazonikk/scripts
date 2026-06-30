@@ -1,0 +1,2827 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amazonikk Manager Desk</title>
+  <style>
+    :root {
+      --bg: #f4f5f2;
+      --surface: #ffffff;
+      --surface-soft: #f9faf7;
+      --ink: #20231f;
+      --muted: #666d63;
+      --line: #dde1d8;
+      --accent: #166e5a;
+      --accent-soft: #e4f4ef;
+      --warning: #9a5a00;
+      --warning-soft: #fff4dc;
+      --danger: #9d2525;
+      --danger-soft: #fff0ef;
+      --blue: #2d5c9f;
+      --blue-soft: #edf4ff;
+      --shadow: 0 18px 45px rgba(30, 39, 34, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 288px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: #1f2b27;
+      color: #f7fbf8;
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 0 4px;
+    }
+
+    .brand-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #f7fbf8;
+      color: #1f2b27;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .brand strong { display: block; font-size: 16px; }
+    .brand span { display: block; color: #b9c6bf; font-size: 13px; margin-top: 2px; }
+
+    .side-label {
+      color: #b9c6bf;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 11px;
+      margin: 18px 6px 8px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #edf3ef;
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 42px;
+    }
+
+    .nav button:hover { background: rgba(255,255,255,.08); }
+    .nav button.active { background: #f7fbf8; color: #18221f; }
+    .nav button.danger-nav {
+      background: #fff0ef;
+      color: #9d2525;
+      border: 1px solid #f0b9b2;
+      font-weight: 800;
+    }
+    .nav button.danger-nav.active {
+      background: #c83232;
+      color: #fff;
+      border-color: #c83232;
+    }
+    .nav button.warn-nav {
+      background: #fff4dc;
+      color: #8a5709;
+      border: 1px solid #f0cf8d;
+      font-weight: 800;
+    }
+    .nav button.warn-nav.active {
+      background: #f2b84b;
+      color: #2b210b;
+      border-color: #f2b84b;
+    }
+    .nav small { color: inherit; opacity: .65; }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .field label {
+      color: #d9e1dc;
+      font-size: 12px;
+    }
+
+    .field input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    .field input::placeholder { color: #aebbb4; }
+
+    main {
+      min-width: 0;
+      padding: 26px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 820px;
+      color: var(--muted);
+      margin: 10px 0 0;
+      line-height: 1.5;
+    }
+
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .status-card strong { display: block; margin-bottom: 5px; }
+    .status-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+
+    .toolbar {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 180px 180px 170px;
+      gap: 10px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar input, .toolbar select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 12px;
+      outline: none;
+    }
+
+    .lang-switch {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .mini-label {
+      color: #d9e1dc;
+      font-size: 12px;
+    }
+
+    .lang-switch select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08);
+      color: #fff;
+      border-radius: 8px;
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    .lang-switch option { color: #1f2b27; }
+
+    .site-header {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .ui-lang-tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .brand .ui-lang-tabs {
+      margin-left: auto;
+      box-shadow: none;
+      border-color: rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      flex-shrink: 0;
+    }
+
+    .brand .ui-lang-btn {
+      color: #d9e1dc;
+    }
+
+    .ui-lang-btn {
+      min-height: 34px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 9px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ui-lang-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .price-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .price-tab {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+
+    .price-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .toolbar input:focus, .toolbar select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .tag.danger { background: var(--danger-soft); border-color: #f0b9b2; color: var(--danger); }
+    .tag.warn { background: var(--warning-soft); border-color: #f0cf8d; color: var(--warning); }
+    .tag.good { background: var(--accent-soft); border-color: #afd8cb; color: var(--accent); }
+    .tag.blue { background: var(--blue-soft); border-color: #bdd0ee; color: var(--blue); }
+
+    .msg {
+      padding: 14px;
+      white-space: pre-wrap;
+      line-height: 1.55;
+      font-size: 15px;
+      overflow-wrap: anywhere;
+      min-height: 130px;
+    }
+
+    .msg.dual {
+      display: grid;
+      gap: 12px;
+    }
+
+    .translation-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-soft);
+      padding: 12px;
+    }
+
+    .translation-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .card-actions {
+      padding: 12px 14px 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+
+    .btn {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn.done {
+      background: var(--accent-soft);
+      border-color: #9acdbd;
+      color: var(--accent);
+    }
+
+    .rules {
+      display: grid;
+      gap: 12px;
+    }
+
+    .rule {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--danger);
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: var(--shadow);
+    }
+
+    .rule.good { border-left-color: var(--accent); }
+    .rule.warn { border-left-color: var(--warning); }
+    .rule h3 { margin: 0 0 8px; font-size: 18px; }
+    .rule p, .rule li { color: var(--muted); line-height: 1.5; }
+    .rule p { margin: 0; }
+    .rule a { color: var(--accent); font-weight: 850; text-decoration: none; }
+    .rule a:hover { text-decoration: underline; }
+    .rule ul { margin: 8px 0 0; padding-left: 20px; }
+
+    .knowledge-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .knowledge-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .knowledge-head h2 { margin: 0 0 6px; font-size: 26px; }
+    .knowledge-head p { margin: 0; color: var(--muted); line-height: 1.5; }
+
+    .knowledge-form {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .knowledge-form textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+
+    .knowledge-answer {
+      display: grid;
+      gap: 12px;
+    }
+
+    .answer-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-soft);
+      padding: 14px;
+    }
+
+    .answer-card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .answer-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .source-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .source-item {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .source-item strong { display: block; margin-bottom: 5px; }
+    .source-item small { display: block; color: var(--muted); margin-bottom: 6px; }
+    .source-item p { margin: 0; color: var(--muted); line-height: 1.45; }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: auto;
+      box-shadow: var(--shadow);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.45;
+    }
+
+    th {
+      background: var(--surface-soft);
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .price-pln, .price-eur {
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .builder {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .builder textarea {
+      width: 100%;
+      min-height: 340px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    .note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .empty {
+      background: var(--surface);
+      border: 1px dashed #bdc5b9;
+      border-radius: 8px;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+      }
+      .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      main { padding: 18px 14px 28px; }
+      .top { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .builder { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .nav { grid-template-columns: 1fr; }
+      .card-actions .btn { flex: 1 1 100%; justify-content: center; }
+      .status-card { min-width: 0; }
+      .brand {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .brand .ui-lang-tabs {
+        margin-left: 0;
+      }
+      .table-wrap {
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        overflow: visible;
+      }
+      table, thead, tbody, tr, th, td {
+        display: block;
+        width: 100%;
+      }
+      thead {
+        display: none;
+      }
+      tr {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        margin-bottom: 10px;
+        overflow: hidden;
+      }
+      td {
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        gap: 10px;
+        padding: 10px 12px;
+      }
+      td:last-child { border-bottom: 0; }
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+      }
+      #pricesBody td:nth-child(1) {
+        background: #edf4ff;
+        color: var(--blue);
+        font-weight: 900;
+      }
+      #pricesBody td:nth-child(2) {
+        background: #e4f4ef;
+        color: var(--accent);
+        font-weight: 850;
+      }
+      #pricesBody td:nth-child(1)::before,
+      #pricesBody td:nth-child(2)::before {
+        color: currentColor;
+        opacity: .72;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-main">
+          <div class="logo">A</div>
+          <div>
+            <strong>Amazonikk Desk</strong>
+            <span>Скрипти для менеджера</span>
+          </div>
+        </div>
+        <div class="ui-lang-tabs" id="uiLang">
+          <button class="ui-lang-btn active" type="button" data-ui-lang="uk" title="Українська">UA</button>
+          <button class="ui-lang-btn" type="button" data-ui-lang="ru" title="Русский">RU</button>
+          <button class="ui-lang-btn" type="button" data-ui-lang="en" title="English">EN</button>
+        </div>
+      </div>
+
+      <div class="side-label">Розділи</div>
+      <nav class="nav" id="nav"></nav>
+
+      <div id="scriptTools">
+      <div class="side-label" data-ui="languageBlock">Мова скриптів</div>
+      <div class="lang-switch">
+        <label class="mini-label" for="scriptLang" data-ui="scriptLanguage">Мова скриптів</label>
+        <select id="scriptLang">
+          <option value="uk">Українська</option>
+          <option value="ru">Русский</option>
+          <option value="en">English + RU</option>
+          <option value="ar">Марокканська арабська + RU</option>
+          <option value="tr">Türkçe + RU</option>
+        </select>
+      </div>
+
+      <div class="side-label">Дані для підстановки</div>
+      <div class="field">
+        <label for="managerName">Ім'я менеджера</label>
+        <input id="managerName" placeholder="Наприклад: Анна">
+      </div>
+      <div class="field">
+        <label for="officePhone">Офісний телефон</label>
+        <input id="officePhone" placeholder="+48 ...">
+      </div>
+      <div class="field">
+        <label for="clientName">Ім'я клієнта</label>
+        <input id="clientName" placeholder="Необов'язково">
+      </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="top" id="scriptIntro">
+        <div>
+          <h1>Готові відповіді для клієнтів</h1>
+          <p class="lead">Менеджер обирає послугу або ситуацію, швидко знаходить потрібний текст, за потреби підставляє свої дані та копіює повідомлення в месенджер.</p>
+        </div>
+        <div class="status-card">
+          <strong>Головне правило</strong>
+          <p>Якщо ситуації немає в скриптах, менеджер пише відповідь самостійно, перевіряє її по правилах і для перекладу на іншу мову використовує ChatGPT.</p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Пошук: код 95, чип, доставка, дорого, не бере трубку...">
+        <select id="serviceFilter"></select>
+        <select id="typeFilter"></select>
+        <select id="quickLang">
+          <option value="uk">Скрипт: UK</option>
+          <option value="ru">Скрипт: RU</option>
+          <option value="en">Script: EN + RU</option>
+          <option value="ar">Марокканська арабська + RU</option>
+          <option value="tr">Türkçe + RU</option>
+        </select>
+      </div>
+
+      <section class="section active" id="scripts">
+        <div class="grid" id="cards"></div>
+      </section>
+
+      <section class="section" id="rules">
+        <div class="rules" id="rulesList"></div>
+      </section>
+
+      <section class="section" id="prices">
+        <div class="price-tabs" id="priceTabs"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Послуга</th><th>Варіант</th><th>Ціна</th><th>Термін</th><th>Ключові умови</th></tr>
+            </thead>
+            <tbody id="pricesBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="builder">
+        <div class="builder">
+          <div class="panel">
+            <h2>Конструктор</h2>
+            <div class="field" style="margin-bottom:10px">
+              <label style="color:var(--muted)" for="toneSelect">Тон</label>
+              <select id="toneSelect">
+                <option value="soft">Спокійно і ввічливо</option>
+                <option value="short">Коротко</option>
+                <option value="firm">Чітко по правилах</option>
+              </select>
+            </div>
+            <button class="btn primary" id="insertFallback">Вставити правило для нестандартної ситуації</button>
+            <p class="note" id="draftHelp">Чернетка потрібна для ситуацій, коли готового скрипта немає або його треба швидко відредагувати під клієнта. Можна перенести сюди будь-який готовий текст кнопкою “Редагувати”, змінити формулювання, перевірити по стоп-правилах і скопіювати вже фінальну відповідь.</p>
+          </div>
+          <div class="panel">
+            <h2>Чернетка відповіді</h2>
+            <textarea id="draft" placeholder="Напишіть або відредагуйте відповідь клієнту..."></textarea>
+            <div class="card-actions" style="margin:12px -14px -14px">
+              <button class="btn primary" id="copyDraft">Копіювати чернетку</button>
+              <button class="btn" id="clearDraft">Очистити</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="custom">
+        <div class="rules">
+          <article class="rule warn">
+            <h3>⭐ Ситуація поза скриптами</h3>
+            <p>Якщо готової відповіді немає: напишіть коротку відповідь самостійно, перевірте її по стоп-правилах, за потреби перекладіть через ChatGPT і тільки після цього відправляйте клієнту.</p>
+            <ul>
+              <li>Не надсилайте в ChatGPT паспортні дані, телефони, email, фото документів або інші персональні дані клієнтів.</li>
+              <li>Не завантажуйте документи клієнтів.</li>
+              <li>Якщо є борг, мед/псих онлайн, литовський код або рекомендація іншої компанії - спочатку погодити з керівником.</li>
+              <li>Відповіді ChatGPT обов'язково перевіряти: модель може помилятися.</li>
+            </ul>
+          </article>
+          <article class="rule good">
+            <h3>Промпт для перекладу</h3>
+            <p>Скопіюйте в ChatGPT:</p>
+            <div class="mbox">Переклади це повідомлення для клієнта на [мова]. Збережи ввічливий діловий тон, не додавай нових умов, цін або обіцянок. Якщо в тексті є службові слова для менеджера - не перекладай їх як частину повідомлення клієнту. Ось текст: [вставити повідомлення]</div>
+          </article>
+          <article class="rule">
+            <h3>Доступ до робочого ChatGPT</h3>
+            <p>Google-акаунт: amazonikkai@gmail.com. Пароль не зберігаємо в цій платформі, бо файл піде на GitHub. Пароль отримати у відповідального менеджера. Якщо система просить 2FA - написати в Telegram @Oleksandra_kozhan.</p>
+            <ul>
+              <li>Вхід: accounts.google.com → додати акаунт → Continue with Google на chat.openai.com.</li>
+              <li>Один чат = одна тема. Для регулярних задач використовуйте окремий проект.</li>
+              <li>Для одноразових задач створюйте новий чат.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const officeAddress = 'Żurawia 22, 00-515 Warszawa, 3 поверх, офіс 311';
+    const mapLink = 'https://maps.app.goo.gl/FGKK4PnHV8hhi7ed9?g_st=iv';
+
+    const navItems = [
+      { id: 'scripts', label: 'Скрипти', count: 'копіювання' },
+      { id: 'rules', label: '❗ Стоп-правила', count: 'обовʼязково', tone: 'danger' },
+      { id: 'prices', label: 'Ціни і терміни', count: 'шпаргалка' },
+      { id: 'builder', label: 'Чернетка', count: 'свій текст' },
+      { id: 'custom', label: '⭐ Поза скриптами', count: 'інструкція', tone: 'warn' }
+    ];
+
+    const templates = [
+      {
+        title: 'Перший контакт після дзвінка',
+        service: 'Загальні',
+        type: 'Перше повідомлення',
+        tags: ['WhatsApp', 'Viber', 'Telegram'],
+        text: `Добрий день! Це {manager} з Amazonikk, ми щойно спілкувалися щодо {service}.
+
+Як і домовились, можете надіслати фото документів прямо сюди. Я перевірю, чи все в порядку, і зорієнтую вас по найближчих датах та вартості.
+
+Для початку потрібні чіткі фото:
+- закордонний паспорт;
+- водійське посвідчення з двох сторін;
+- код 95 або чип-карта, якщо вже є.
+
+Я на зв'язку.`
+      },
+      {
+        title: 'Клієнт залишив заявку, не бере трубку',
+        service: 'Загальні',
+        type: 'Не бере трубку',
+        tags: ['коротко', 'після заявки'],
+        text: `Добрий день{client}! Це {manager}, компанія Amazonikk.
+
+Ви залишали заявку щодо документів для водія. Не вдалося до вас додзвонитися.
+
+Напишіть, будь ласка, коли вам зручно поговорити, або можемо обговорити все тут у переписці.`
+      },
+      {
+        title: 'Клієнт дзвонить, але зараз немає можливості відповісти',
+        service: 'Загальні',
+        type: 'Не можемо говорити',
+        tags: ['навантаження', 'переписка'],
+        text: `Перепрошую, зараз велике навантаження в офісі й не можу нормально поговорити телефоном.
+
+Давайте, якщо вам зручно, обговоримо деталі тут у переписці. Так я зможу швидше перевірити вашу ситуацію і нічого не пропустити.
+
+Якщо вам все ж зручніше телефоном, напишіть, будь ласка, коли вам краще передзвонити.`
+      },
+      {
+        title: 'Клієнт хоче саме дзвінок',
+        service: 'Загальні',
+        type: 'Дзвінок',
+        tags: ['домовитись про час'],
+        text: `Так, можемо зідзвонитися.
+
+Напишіть, будь ласка, у який час вам буде зручно сьогодні. Також коротко вкажіть, яке питання: код 95, чип-карта, ADR, заміна прав чи інша послуга.
+
+Я підготую інформацію перед дзвінком.`
+      },
+      {
+        title: 'Клієнт вже в процесі і питає статус документа',
+        service: 'Загальні',
+        type: 'Статус процесу',
+        tags: ['перенаправити', 'офіс'],
+        text: `Щодо вашого поточного процесу краще написати на наш офісний номер: {officePhone}
+
+Колеги в офісі перевірять інформацію по вашій заявці й дадуть актуальну відповідь по статусу документа.`
+      },
+      {
+        title: 'Нестандартна ситуація поза скриптами',
+        service: 'Загальні',
+        type: 'Правило',
+        tags: ['ChatGPT', 'важливо'],
+        text: `Якщо потрібної відповіді немає в скриптах:
+
+1. Напишіть відповідь самостійно простими словами.
+2. Перевірте, щоб вона не порушувала стоп-правила: борг, медосмотр/психотест онлайн, литовский код, рекомендації інших компаній.
+3. Якщо потрібно перекласти відповідь на іншу мову, вставте текст у ChatGPT і попросіть переклад.
+4. Якщо є сумнів або ризик, спочатку погодьте відповідь з керівником.`
+      },
+      {
+        title: 'Код 95: перші питання для підбору',
+        service: 'Код 95',
+        type: 'Питання',
+        tags: ['кваліфікація', 'воронка'],
+        text: `Щоб підібрати правильний варіант Code 95, уточніть, будь ласка:
+
+1. Яка у вас категорія прав: C чи D?
+2. Коли була відкрита категорія?
+- C до 09.09.2009 або після?
+- D до 08.09.2008 або після?
+3. Чи можете приїхати у Варшаву на півдня?
+4. Які у вас права і громадянство?
+5. Чи є вже литовський або польський код 95?
+
+Після цього я скажу точний варіант, термін і вартість.`
+      },
+      {
+        title: 'Код 95: короткий курс з приїздом',
+        service: 'Код 95',
+        type: 'Ціна',
+        tags: ['короткий курс', 'приїзд'],
+        text: `Для вас підходить короткий курс Code 95.
+
+Умови:
+- вартість: 1900 зл / 465 євро під ключ;
+- термін: приблизно 4-5 тижнів;
+- потрібно приїхати у Варшаву 1 раз на півдня;
+- медкомісія, психотест, документи, навчання, фото і пошта входять у процес.
+
+Документи з собою:
+- закордонний паспорт;
+- водійське посвідчення;
+- PESEL, якщо є;
+- фото 3.5 x 4.5, можна зробити у нас;
+- старий код 95, якщо є;
+- віза або карта побиту, якщо потрібна легалізація.`
+      },
+      {
+        title: 'Код 95: короткий курс без приїзду',
+        service: 'Код 95',
+        type: 'Ціна',
+        tags: ['онлайн', 'литовський формат'],
+        text: `Є варіант короткого курсу Code 95 без приїзду.
+
+Умови:
+- вартість: 3900 зл / 900 євро під ключ;
+- термін: приблизно 6 тижнів;
+- обов'язково потрібно знаходитися на території ЄС;
+- потрібно надіслати скани документів і відео.
+
+Важливо: при дистанційному оформленні клієнт отримує тільки карту Code 95. Медосмотр і психотест не відправляємо ні сканом, ні оригіналом. Якщо потрібні мед і псих, потрібно приїхати особисто.`
+      },
+      {
+        title: 'Код 95: довгий курс з екзаменом',
+        service: 'Код 95',
+        type: 'Ціна',
+        tags: ['довгий курс', 'WORD'],
+        text: `Для вас підходить довгий курс Code 95 з екзаменом.
+
+Умови:
+- вартість: 3400 зл / 840 євро;
+- запис на екзамен: +150 зл;
+- термін: приблизно 35 робочих днів;
+- потрібно приїхати у Варшаву для оформлення документів, медкомісії та психотесту.
+
+Навчання триває 21 день онлайн. Після навчання складається екзамен у WORD. Карту виготовляють після успішної здачі.`
+      },
+      {
+        title: 'Код 95: довгий курс без екзамену через литовський',
+        service: 'Код 95',
+        type: 'Ціна',
+        tags: ['без екзамену', 'приїзд'],
+        text: `Є варіант довгого курсу без екзамену через литовський код.
+
+Умови:
+- вартість: 4000 зл / 975 євро під ключ;
+- термін: 6-7 тижнів;
+- потрібно приїхати у Варшаву на оформлення;
+- спочатку робимо литовський код, потім міняємо на польський.
+
+Цей варіант підходить, якщо клієнт хоче уникнути екзамену в Польщі.`
+      },
+      {
+        title: 'Код 95: довгий курс без приїзду',
+        service: 'Код 95',
+        type: 'Ціна',
+        tags: ['онлайн', 'без екзамену'],
+        text: `Є дистанційний варіант довгого курсу Code 95 без приїзду.
+
+Умови:
+- вартість: 6300 зл / 1450 євро;
+- без екзамену;
+- обов'язково потрібно знаходитися на території ЄС;
+- потрібно надіслати скани документів і відео.
+
+Важливо: при дистанційному оформленні клієнт отримує тільки карту Code 95. Медосмотр і психотест не відправляємо ні сканом, ні оригіналом.`
+      },
+      {
+        title: 'Код 95: якщо польський варіант дорого',
+        service: 'Код 95',
+        type: 'Заперечення',
+        tags: ['литовський', 'бюджет'],
+        text: `Розумію вас. Польський Code 95 залишається основним варіантом, але якщо він вам не підходить по бюджету, у нас також є литовський формат оформлення.
+
+Можемо детальніше розказати по умовах і підібрати варіант під вашу ситуацію.
+
+Уточніть, будь ласка, які у вас права, громадянство і чи можете приїхати у Варшаву.`
+      },
+      {
+        title: 'Код 95: молодий водій 18-20 років',
+        service: 'Код 95',
+        type: 'Питання',
+        tags: ['до 21 року', 'уточнити'],
+        text: `Для водіїв до 21 року умови відрізняються: потрібна розширена кваліфікація, обсяг навчання більший, а вартість вища.
+
+Перед тим як назвати точні умови, потрібно уточнити:
+- які категорії вже відкриті;
+- які права є зараз;
+- яку категорію плануєте використовувати для роботи;
+- чи потрібен варіант через Польщу або через Литву.
+
+Актуальну ціну і можливість оформлення по цьому напрямку я додатково уточню у менеджера.`
+      },
+      {
+        title: 'Заміна литовського Code 95 з QR на польський',
+        service: 'Заміна коду 95',
+        type: 'Ціна',
+        tags: ['QR', 'приїзд'],
+        text: `Заміна литовського Code 95 з QR на польський код без продовження.
+
+Умови:
+- вартість: 1900 зл / 470 євро під ключ;
+- термін: приблизно 1 місяць;
+- потрібно приїхати у Варшаву на півдня.
+
+Що входить:
+- переклад прав і литовського коду;
+- медосмотр і психотест;
+- подача на заміну в уженд;
+- виготовлення карти.
+
+Документи: паспорт, права, PESEL якщо є, фото 3.5 x 4.5, литовський Code 95 з QR, віза або ВНЖ.`
+      },
+      {
+        title: 'Заміна старого литовського паперового Code 95',
+        service: 'Заміна коду 95',
+        type: 'Ціна',
+        tags: ['паперовий', 'продовження'],
+        text: `Заміна старого литовського паперового Code 95 на польський з продовженням на 5 років.
+
+Умови:
+- вартість: 2300 зл / 565 євро під ключ;
+- термін: 3-4 тижні;
+- потрібно приїхати у Варшаву на півдня.
+
+Документи: паспорт, права, PESEL якщо є, фото 3.5 x 4.5, старий литовський Code 95, віза або ВНЖ.`
+      },
+      {
+        title: 'Заміна литовського без приїзду',
+        service: 'Заміна коду 95',
+        type: 'Ціна',
+        tags: ['онлайн', 'ЄС'],
+        text: `Є варіант заміни литовського Code 95 без приїзду.
+
+Умови:
+- вартість: 3500 зл / 800 євро під ключ;
+- термін: приблизно 6 тижнів;
+- обов'язково потрібно знаходитися на території ЄС;
+- потрібно надіслати скани документів.
+
+Важливо: пластиковий литовський код на даний момент не міняємо на польський. Замість цього пропонуємо короткий курс.`
+      },
+      {
+        title: 'Заміна польського Code 95 на новий',
+        service: 'Заміна коду 95',
+        type: 'Ціна',
+        tags: ['польський код', 'продовження'],
+        text: `Заміна польського Code 95 на новий коштує 750 зл / 185 євро.
+
+Робимо, якщо:
+- код виданий не на повні 5 років;
+- змінилися дані й потрібні нові документи.
+
+Термін:
+- якщо подаємо в тому самому уженді: приблизно 2 тижні;
+- якщо в іншому уженді: приблизно 4 тижні.
+
+Документи: паспорт, права, фото 3.5 x 4.5, старий код, психотест і медична довідка.`
+      },
+      {
+        title: 'Чип-карта: перші питання',
+        service: 'Чип-карта',
+        type: 'Питання',
+        tags: ['тахограф', 'підбір'],
+        text: `Щоб підібрати правильний варіант чип-карти, уточніть, будь ласка:
+
+1. Чи була у вас раніше чип-карта?
+2. Якщо була, яка країна видачі і до якої дати вона дійсна?
+3. На підставі чого будемо робити нову карту:
+- польський Code 95;
+- справка з ГАІ з апостилем;
+- європейський пластиковий Code 95;
+- інший варіант?
+4. Ви хочете оформити онлайн чи з приїздом?
+
+Важливо: якщо є стара активна чип-карта, може знадобитися анулювання.`
+      },
+      {
+        title: 'Чип-карта на підставі польського Code 95',
+        service: 'Чип-карта',
+        type: 'Ціна',
+        tags: ['600 зл', 'онлайн'],
+        text: `Чип-карта для тахографа на підставі польського Code 95.
+
+Умови:
+- вартість: 600 зл / 150 євро під ключ, доставка включена;
+- термін: 12-14 робочих днів;
+- можна оформити онлайн.
+
+Обов'язково перевірити: номер на правах і на Code 95 має співпадати.
+
+Документи:
+- паспорт;
+- водійське посвідчення;
+- PESEL, якщо є;
+- підпис на білому листі;
+- селфі на білому фоні;
+- фото старої чип-карти, якщо є;
+- польський Code 95.`
+      },
+      {
+        title: 'Чип-карта на підставі справки з ГАІ',
+        service: 'Чип-карта',
+        type: 'Ціна',
+        tags: ['700 зл', 'апостиль'],
+        text: `Чип-карта на підставі справки з ГАІ з апостилем.
+
+Умови:
+- вартість: 700 зл / 175 євро під ключ;
+- термін: 12-14 робочих днів;
+- для UA/BY переклад справки входить у вартість;
+- якщо справка не російською або українською, переклад +150/200 зл.
+
+Важливо:
+- номер на правах і справці має співпадати;
+- справка має бути не старше 2 місяців.
+
+Документи: паспорт, права, PESEL якщо є, підпис, селфі, стара чип-карта якщо є, справка з ГАІ з апостилем.`
+      },
+      {
+        title: 'Чип-карта на підставі європейського Code 95',
+        service: 'Чип-карта',
+        type: 'Ціна',
+        tags: ['800 зл', 'пластик'],
+        text: `Чип-карта на підставі європейського пластикового Code 95.
+
+Умови:
+- вартість: 800 зл / 200 євро під ключ;
+- термін: 12-14 робочих днів;
+- можна оформити онлайн.
+
+Обов'язково перевірити: номер на коді і на правах має співпадати.
+
+Важливо: зі словацьким Code 95 чип-карту не робимо. По чеському та іншим країнам потрібно додатково уточнювати.`
+      },
+      {
+        title: 'Киргизький варіант чип-карти',
+        service: 'Чип-карта',
+        type: 'Ціна',
+        tags: ['без приїзду', '1750 зл'],
+        text: `Киргизький варіант чип-карти.
+
+Умови:
+- приїжджати не потрібно;
+- термін: 3-4 тижні;
+- вартість: 1750 зл.
+
+Документи:
+- паспорт;
+- водійські права.`
+      },
+      {
+        title: 'Анулювання української чип-карти',
+        service: 'Чип-карта',
+        type: 'Ціна',
+        tags: ['анулювання', '200 зл'],
+        text: `Анулювання української чип-карти.
+
+Умови:
+- вартість: 200 зл під ключ;
+- термін: приблизно 2 тижні.
+
+Важливо: на нову чип-карту можна подаватися за 60 днів до кінця поточної. Якщо строк більший, стару потрібно анулювати.
+
+Документи:
+- український паспорт з двох сторін;
+- прописка;
+- ідентифікаційний номер;
+- фото українського чипа;
+- водійські права.`
+      },
+      {
+        title: 'Стара активна чип-карта',
+        service: 'Чип-карта',
+        type: 'Правило',
+        tags: ['обовʼязково', 'анулювання'],
+        text: `Якщо у клієнта є старий чип, виданий в ЄС, Грузії, Вірменії, Україні, Туреччині або Молдові, його потрібно анулювати.
+
+Без анулювання старого чипа польський чип не видадуть. Система одразу бачить активну карту.
+
+Можливі варіанти:
+- анулювання в країні видачі;
+- передати чип нам, щоб ми повернули його в Польщу через офіційну процедуру.
+
+Після підтвердженого анулювання можна подаватися на польський чип.`
+      },
+      {
+        title: 'ADR: перші питання',
+        service: 'ADR',
+        type: 'Питання',
+        tags: ['небезпечні вантажі'],
+        text: `Щоб підібрати ADR, уточніть, будь ласка:
+
+1. Який тип ADR потрібен:
+- базовий;
+- базовий + цистерна?
+2. Чи знаєте польську мову?
+
+Якщо польську знаєте, можна розглядати польський ADR з екзаменом. Якщо польську не знаєте, можемо запропонувати казахський/узбецький варіант без приїзду і без екзамену.`
+      },
+      {
+        title: 'Польський ADR',
+        service: 'ADR',
+        type: 'Ціна',
+        tags: ['екзамен', 'польська мова'],
+        text: `Польський ADR проходить тільки польською мовою.
+
+Вартість:
+- базовий: 2400 зл / 550 євро;
+- база + цистерна: 3050 зл / 700 євро.
+
+Процес:
+1. Оплата мінімум за 7 днів до екзамену.
+2. Після оплати доступ до навчання.
+3. Приїзд на оформлення документів або документи можна вислати дистанційно.
+4. Приїзд на сам екзамен.
+5. Пластикова карта виготовляється 2-3 тижні.
+
+Карту можемо відправити по всьому світу.`
+      },
+      {
+        title: 'Казахський/узбецький ADR',
+        service: 'ADR',
+        type: 'Ціна',
+        tags: ['без приїзду', 'без екзамену'],
+        text: `Казахський/узбецький ADR можна оформити без приїзду і без екзамену.
+
+Вартість:
+- базовий: 1400 зл;
+- база + цистерна: 1700 зл.
+
+Термін: 3-4 тижні після оплати.
+
+Документи:
+- закордонний паспорт;
+- водійське посвідчення;
+- фото 3.5 x 4.5.`
+      },
+      {
+        title: 'Заміна прав: перші питання',
+        service: 'Заміна прав',
+        type: 'Питання',
+        tags: ['185 днів', 'прописка'],
+        text: `Щоб перевірити можливість заміни прав на польські, уточніть:
+
+1. Яке громадянство і які права?
+2. Чи права б'ються по базі?
+3. Чи є польська легалізація більше 6 місяців: віза, карта побиту або інший документ?
+4. Чи є прописка в центрі Варшави?
+
+Обов'язкова умова: перебування в Польщі мінімум 6 місяців / 185 днів по візі або ВНЖ.`
+      },
+      {
+        title: 'Заміна прав інших країн на польські',
+        service: 'Заміна прав',
+        type: 'Ціна',
+        tags: ['1700 зл', 'під ключ'],
+        text: `Заміна іноземного водійського посвідчення на польське.
+
+Основна вартість: 1700 зл під ключ.
+
+Обов'язкові умови:
+- перебування в Польщі 6 місяців / 185 днів;
+- польська легалізація;
+- прописка в Варшаві, якщо немає +650 зл.
+
+Документи:
+- водійські права;
+- легалізація;
+- PESEL, якщо є;
+- Code 95, якщо є;
+- справка з ГАІ з апостилем;
+- прописка в центрі Варшави.`
+      },
+      {
+        title: 'Заміна прав онлайн',
+        service: 'Заміна прав',
+        type: 'Ціна',
+        tags: ['дистанційно', '+500 зл'],
+        text: `Заміна прав може бути оформлена онлайн.
+
+Доплата за дистанційне оформлення: +500 зл до вартості послуги.
+
+Важливо: клієнт обов'язково має надіслати нам поштою оригінал справки з ГАІ з апостилем.
+
+Після готовності прав потрібно буде приїхати в уженд, здати старі права і забрати нові. Якщо клієнт не може приїхати, він має надіслати нам старі права поштою, ми обміняємо і відправимо нові.`
+      },
+      {
+        title: 'Заміна прав з видаленням коду 70',
+        service: 'Заміна прав',
+        type: 'Ціна',
+        tags: ['код 70', 'EUR'],
+        text: `Заміна прав з видаленням коду 70.
+
+Вартість: 1500 EUR під ключ.
+
+По цій послузі можливо опускати ціну до 1000 EUR, але тільки за ситуацією і після узгодження.`
+      },
+      {
+        title: 'Навчання на категорії B / C / CE',
+        service: 'Категорії B/C/CE',
+        type: 'Пояснення',
+        tags: ['PKK', 'екзамен'],
+        text: `Ми допомагаємо з документами для категорій B, C, CE.
+
+Обов'язкова умова: законне перебування в Польщі, карта побиту або віза 185 днів, плюс прописка.
+
+Що робимо зараз:
+- допомагаємо з документами і формальностями;
+- оформлюємо підтвердження проходження практики.
+
+Важливо: повноцінне практичне навчання поки не робимо. Клієнт має реально вміти водити, інакше екзамен не здасть.`
+      },
+      {
+        title: 'Робота для водіїв',
+        service: 'Працевлаштування',
+        type: 'Питання',
+        tags: ['передати далі'],
+        text: `Так, можемо зафіксувати ваш запит щодо роботи водієм.
+
+Напишіть, будь ласка:
+- які категорії у вас відкриті;
+- який досвід роботи;
+- в якій країні хочете працювати;
+- які документи вже маєте: Code 95, чип-карта, ADR, віза/ВНЖ;
+- коли готові виїхати.
+
+Я передам інформацію відповідальному менеджеру, щоб з вами зв'язалися по вакансіях.`
+      },
+      {
+        title: 'Український закордонний паспорт',
+        service: 'Додаткові послуги',
+        type: 'Доппродаж',
+        tags: ['Україна', 'паспорт'],
+        text: `До речі, підкажіть, у вас закордонний паспорт дійсний?
+
+Якщо потрібно продовжити або оформити новий український закордонний паспорт, ми можемо допомогти з записом і організаційними питаннями.
+
+Орієнтовна вартість: близько 300 EUR. Термін виготовлення уточнюється індивідуально.`
+      },
+      {
+        title: 'PESEL',
+        service: 'Додаткові послуги',
+        type: 'Ціна',
+        tags: ['300 зл', 'онлайн 700 зл'],
+        text: `Можемо допомогти з отриманням номера PESEL.
+
+Для звичайного оформлення потрібен тільки паспорт.
+
+Вартість:
+- PESEL: 300 зл / 75 євро;
+- онлайн PESEL: 700 зл / 170 євро.`
+      },
+      {
+        title: 'Прописка у Варшаві',
+        service: 'Додаткові послуги',
+        type: 'Ціна',
+        tags: ['meldunek', '650 зл'],
+        text: `Прописка у Варшаві на 3 місяці коштує 650 зл.
+
+Документи:
+- паспорт;
+- європейська легалізація.
+
+Якщо прописка потрібна для прав, має бути польська легалізація більше 6 місяців.`
+      },
+      {
+        title: 'Карта побиту',
+        service: 'Додаткові послуги',
+        type: 'Відмова',
+        tags: ['не надаємо'],
+        text: `На даний момент ми не надаємо послугу оформлення карти побиту.
+
+Якщо потрібно, я можу уточнити у керівника, чи можемо когось рекомендувати. Самостійно контакти інших компаній не даю.`
+      },
+      {
+        title: 'Польська віза для українців',
+        service: 'Додаткові послуги',
+        type: 'Ціна',
+        tags: ['1200 EUR', 'уточнити'],
+        text: `Є послуга польської візи для українців, які знаходяться в Польщі, довго чекають карту побиту і хочуть виїхати.
+
+Формат: дистанційно через Україну.
+Вартість: 1200 EUR.
+
+Перед продажем обов'язково уточнюємо актуальність і деталі у менеджерів.`
+      },
+      {
+        title: 'Доставка: запросити дані',
+        service: 'Доставка',
+        type: 'Питання',
+        tags: ['InPost', 'Nova Post', 'DPD'],
+        text: `Для доставки надішліть, будь ласка:
+
+- спосіб доставки: поштомат чи на адресу;
+- ім'я та прізвище отримувача;
+- номер телефону отримувача;
+- країна і місто;
+- вулиця, номер будинку, квартира;
+- поштовий індекс.
+
+Якщо доставка ще не оплачена, після отримання даних я надішлю суму і реквізити. Відправляємо після оплати.`
+      },
+      {
+        title: 'Доставка: ціни',
+        service: 'Доставка',
+        type: 'Ціна',
+        tags: ['Польща', 'Європа', 'Україна'],
+        text: `Вартість доставки:
+
+- Польща: 30 зл / 10 євро, InPost;
+- Україна: 85 зл / 22 євро, Nova Post;
+- Білорусь: безкоштовно, передаємо через учнів, які їдуть туди;
+- Європа, крім Іспанії та Італії: 120 зл / 25 євро, Nova Post або DPD;
+- Італія: 140 зл / 30 євро;
+- Іспанія: 160 зл / 35 євро.
+
+За доставку відповідальності не несемо. Якщо посилка не дійде, у 99% випадків вона повертається до нас.`
+      },
+      {
+        title: 'Адреса офісу',
+        service: 'Загальні',
+        type: 'Адреса',
+        tags: ['Варшава', 'самовивіз'],
+        text: `Адреса офісу:
+${officeAddress}
+
+Google Maps:
+${mapLink}
+
+Як вийдете з ліфта, йдете наліво, проходите перші двері і йдете прямо до кінця коридору.
+
+Графік: понеділок-п'ятниця, 8:00-18:00.`
+      },
+      {
+        title: 'Заперечення: дорого',
+        service: 'Загальні',
+        type: 'Заперечення',
+        tags: ['ціна', 'цінність'],
+        text: `Розумію вас.
+
+Ціна включає повний супровід: перевірку документів, оформлення, подачу, виготовлення і всі організаційні моменти. Вам не потрібно самостійно розбиратися з бюрократією і ризикувати помилками.
+
+Ми працюємо з офіційними процедурами, тому документи проходять через потрібні реєстри і перевірки.
+
+Якщо у вас є пропозиція дешевше, можете надіслати умови, я подивлюся і скажу, чи можемо запропонувати кращий варіант.`
+      },
+      {
+        title: 'Заперечення: подумаю',
+        service: 'Загальні',
+        type: 'Заперечення',
+        tags: ['follow-up'],
+        text: `Звісно, подумайте.
+
+Я можу залишити вам всю інформацію тут у повідомленні, щоб було зручно повернутися до неї пізніше.
+
+Підкажіть, будь ласка, що саме вас зупиняє: ціна, терміни, документи чи потрібно порадитися?`
+      },
+      {
+        title: 'Клієнт не може приїхати у Варшаву',
+        service: 'Загальні',
+        type: 'Заперечення',
+        tags: ['онлайн'],
+        text: `Без проблем, по багатьох послугах у нас є дистанційний варіант.
+
+Ви надсилаєте скани документів, ми перевіряємо ситуацію, оформлюємо процес і після готовності відправляємо документ поштою.
+
+Уточніть, будь ласка, яка саме послуга вам потрібна і в якій країні ви зараз знаходитеся.`
+      }
+    ];
+
+    templates.push({
+      title: 'Чип-карта: як правильно підготувати фото документів',
+      service: 'Чип-карта',
+      type: 'Документи',
+      tags: ['важливо', 'фото', 'білий фон'],
+      texts: {
+        uk: `Документи для оформлення чип-карти потрібно сфотографувати чітко, на білій поверхні або білому фоні.
+
+Потрібно надіслати:
+
+1. Фото паспорта: перша сторінка, де вказана основна інформація про вас.
+2. Фото водійських прав: покладіть права на білий лист і зробіть фото з двох сторін.
+3. Ваше фото: станьте біля стіни, нехай вас сфотографують по груди при хорошому освітленні або зі спалахом.
+4. Фото польського Code 95: покладіть код 95 на білий лист і зробіть фото з двох сторін.
+5. Фото старої чип-карти: покладіть чип-карту на білий лист і зробіть фото з двох сторін. Якщо чип-карти раніше не було, напишіть: ЧИП КАРТЫ НЕТ.
+6. Фото PESEL або просто напишіть номер. Якщо PESEL не робили, напишіть: ПЕСЕЛЯ НЕТ.
+7. Якщо немає польського Code 95, потрібно взяти справку з ГАІ.
+8. Прикріплені документи потрібно роздрукувати і підписати по зразку. Якщо немає такої можливості, розпишіться на білому листі і надішліть фото підпису.`,
+        ru: `Документы для оформления чип-карты нужно сфотографировать четко, на белой поверхности или белом фоне.
+
+Нужно отправить:
+
+1. Фото паспорта: первая страница, где указана основная информация о вас.
+2. Фото водительских прав: положите права на белый лист и сделайте фото с двух сторон.
+3. Ваше фото: станьте возле стены, пусть вас сфотографируют по грудь при хорошем освещении или со вспышкой.
+4. Фото польского Code 95: положите код 95 на белый лист и сделайте фото с двух сторон.
+5. Фото старой чип-карты: положите чип-карту на белый лист и сделайте фото с двух сторон. Если чип-карты раньше не было, напишите: ЧИП КАРТЫ НЕТ.
+6. Фото PESEL или просто напишите номер. Если PESEL не делали, напишите: ПЕСЕЛЯ НЕТ.
+7. Если нет польского Code 95, нужно взять справку из ГАИ.
+8. Приложенные документы нужно распечатать и подписать по образцу. Если нет такой возможности, распишитесь на белом листе и отправьте фото подписи.`,
+        en: `Documents for the tachograph chip card must be photographed clearly on a white surface or white background.
+
+Please send:
+
+1. Passport photo: the first page with your main personal information.
+2. Driving licence photo: place the licence on a white sheet and take photos of both sides.
+3. Your personal photo: stand near a wall and ask someone to take a photo from the chest up, with good lighting or flash.
+4. Polish Code 95 photo: place Code 95 on a white sheet and take photos of both sides.
+5. Old chip card photo: place the chip card on a white sheet and take photos of both sides. If you never had a chip card, write: ЧИП КАРТЫ НЕТ.
+6. PESEL photo or just send the number. If you do not have PESEL, write: ПЕСЕЛЯ НЕТ.
+7. If you do not have Polish Code 95, you need a traffic police certificate.
+8. The attached documents should be printed and signed according to the sample. If this is not possible, sign on a white sheet and send a photo of the signature.`,
+        ar: `Salam! L-wata2iq dyal carte tachographe khas tsawerhom b وضوح فوق سطح أبيض ولا خلفية بيضاء.
+
+Sift lina:
+
+1. Taswira dyal passport: safha l-oula li fiha l-ma3loumat dyalek.
+2. Taswira dyal permis: 7et permis فوق ورقة بيضاء وصور الجهتين.
+3. Taswira dyalek: وقف حد الحيط وخلي شي حد يصورك من الصدر لفوق بضوء مزيان أو flash.
+4. Taswira dyal Code 95 البولندي: 7et l-code فوق ورقة بيضاء وصور الجهتين.
+5. Taswira dyal l-chip card القديمة: 7etha فوق ورقة بيضاء وصور الجهتين. Ila ma kantch 3andek, kteb: ЧИП КАРТЫ НЕТ.
+6. Taswira dyal PESEL aw kteb الرقم. Ila ma 3andekch PESEL, kteb: ПЕСЕЛЯ НЕТ.
+7. Ila ma 3andekch Polish Code 95, khas شهادة من شرطة المرور.
+8. L-wata2iq المرفقة khas tprintihom w twq3hom b7al l-example. Ila ma qdertch, wq3 فوق ورقة بيضاء وصift taswira dyal توقيع.`,
+        tr: `Takograf çip kartı için belgelerin net şekilde, beyaz bir yüzeyde veya beyaz arka planda fotoğraflanması gerekir.
+
+Lütfen şunları gönderin:
+
+1. Pasaport fotoğrafı: temel bilgilerinizin olduğu ilk sayfa.
+2. Ehliyet fotoğrafı: ehliyeti beyaz kağıdın üzerine koyup iki tarafını fotoğraflayın.
+3. Kendi fotoğrafınız: duvar önünde, göğüs hizasından yukarı doğru, iyi ışıkta veya flaşla çekilmiş fotoğraf.
+4. Polonya Code 95 fotoğrafı: Code 95'i beyaz kağıdın üzerine koyup iki tarafını fotoğraflayın.
+5. Eski çip kart fotoğrafı: kartı beyaz kağıdın üzerine koyup iki tarafını fotoğraflayın. Daha önce çip kartınız yoksa yazın: ЧИП КАРТЫ НЕТ.
+6. PESEL fotoğrafı veya numarası. PESEL yoksa yazın: ПЕСЕЛЯ НЕТ.
+7. Polonya Code 95 yoksa trafik polisinden belge almak gerekir.
+8. Ekli belgeleri yazdırıp örneğe göre imzalamak gerekir. Mümkün değilse beyaz kağıda imza atıp fotoğrafını gönderin.`
+      }
+    });
+
+    const rules = [
+      {
+        title: 'Медосмотр і психотест при онлайн Code 95',
+        tone: 'danger',
+        body: 'Якщо клієнт робить Code 95 онлайн без приїзду, не відправляємо скани, фото або оригінали медосмотра і психотеста. Клієнт отримує тільки карту Code 95. Правильне формулювання: “вартість включає все під ключ”. Не говоримо онлайн-клієнту, що “робимо для вас медосмотр і психотест”.'
+      },
+      {
+        title: 'Борг клієнта',
+        tone: 'danger',
+        body: 'Поки у клієнта є борг, не відправляємо жодні документи: скани, оригінали, литовський код, медосмотр, психотест або будь-що інше. Виняток можливий тільки з особистого дозволу Никиты.'
+      },
+      {
+        title: 'Литовський код при боргу',
+        tone: 'danger',
+        body: 'Якщо у клієнта є борг, литовський код не відправляємо ні в якому вигляді. Це правило діє навіть якщо клієнт сам просить або передумав робити польський.'
+      },
+      {
+        title: 'Рекомендації інших компаній',
+        tone: 'warn',
+        body: 'Менеджер не має права самостійно рекомендувати інші компанії, спеціалістів або контакти. Правильна відповідь: “Уточню у керівника, ми з вами звʼяжемося”.'
+      },
+      {
+        title: 'Ситуація поза скриптами',
+        tone: 'good',
+        body: 'Якщо немає готової відповіді, менеджер пише текст самостійно, перевіряє його по стоп‑правилах і, якщо потрібен переклад, використовує ChatGPT. Якщо є сумнів або ризик, потрібно погодити з керівником.'
+      },
+      {
+        title: 'Вихідні і доплати',
+        tone: 'warn',
+        body: 'Не записувати клієнта на суботу або неділю без погодження з офісом. Доплата: короткий курс +250 зл, довгий курс +150 зл. Якщо клієнт приїжджає після 12:00 і не встигає пройти мед/псих у лікарні, офісний варіант +150 зл.'
+      }
+    ];
+
+    const priceRows = [
+      ['Код 95', 'Короткий курс з приїздом', '1900 зл / 465 євро', '4-5 тижнів', 'Приїзд у Варшаву на півдня'],
+      ['Код 95', 'Короткий курс без приїзду', '3900 зл / 900 євро', 'приблизно 6 тижнів', 'Тільки на території ЄС, мед/псих не відправляємо'],
+      ['Код 95', 'Довгий курс з екзаменом', '3400 зл / 840 євро + 150 зл запис', 'приблизно 35 робочих днів', 'Навчання 21 день, екзамен WORD'],
+      ['Код 95', 'Довгий без екзамену через литовський', '4000 зл / 975 євро', '6-7 тижнів', 'Спочатку литовський, потім заміна на польський'],
+      ['Код 95', 'Довгий без приїзду', '6300 зл / 1450 євро', 'залежить від процесу', 'Тільки ЄС, мед/псих не відправляємо'],
+      ['Заміна Code 95', 'Литовський QR на польський', '1900 зл / 470 євро', 'приблизно 1 місяць', 'З приїздом'],
+      ['Заміна Code 95', 'Старий паперовий литовський', '2300 зл / 565 євро', '3-4 тижні', 'З продовженням на 5 років'],
+      ['Заміна Code 95', 'Литовський без приїзду', '3500 зл / 800 євро', 'приблизно 6 тижнів', 'Клієнт має бути в ЄС'],
+      ['Заміна Code 95', 'Польський на новий', '750 зл / 185 євро', '2-4 тижні', 'Залежить від уженду'],
+      ['Чип-карта', 'На підставі польського Code 95', '600 зл / 150 євро', '12-14 робочих днів', 'Номер на правах і коді має співпадати'],
+      ['Чип-карта', 'На підставі справки з ГАІ', '700 зл / 175 євро', '12-14 робочих днів', 'Справка не старше 2 місяців'],
+      ['Чип-карта', 'На підставі європейського Code 95', '800 зл / 200 євро', '12-14 робочих днів', 'Словацький код не беремо'],
+      ['Чип-карта', 'Киргизький варіант', '1750 зл', '3-4 тижні', 'Тільки паспорт і права'],
+      ['Чип-карта', 'Анулювання української чип-карти', '200 зл', 'приблизно 2 тижні', 'Потрібне, якщо стара карта активна'],
+      ['ADR', 'Польський базовий', '2400 зл / 550 євро', 'карта 2-3 тижні після екзамену', 'Польська мова, екзамен'],
+      ['ADR', 'Польський база + цистерна', '3050 зл / 700 євро', 'карта 2-3 тижні після екзамену', 'Польська мова, екзамен'],
+      ['ADR', 'Казахський/узбецький базовий', '1400 зл', '3-4 тижні', 'Без приїзду і без екзамену'],
+      ['ADR', 'Казахський/узбецький база + цистерна', '1700 зл', '3-4 тижні', 'Без приїзду і без екзамену'],
+      ['Заміна прав', 'Іноземні на польські', '1700 зл', 'індивідуально', '185 днів у Польщі, прописка'],
+      ['Заміна прав', 'Онлайн оформлення', '+500 зл', 'індивідуально', 'Оригінал справки з апостилем поштою'],
+      ['Додаткові', 'PESEL', '300 зл / 75 євро', 'індивідуально', 'Тільки паспорт'],
+      ['Додаткові', 'Онлайн PESEL', '700 зл / 170 євро', 'індивідуально', 'Дистанційно'],
+      ['Додаткові', 'Прописка Варшава 3 міс.', '650 зл', 'індивідуально', 'Для прав потрібна польська легалізація 6+ місяців']
+    ];
+
+    const state = {
+      section: 'scripts',
+      service: 'all',
+      type: 'all',
+      query: '',
+      uiLang: 'uk',
+      scriptLang: 'uk',
+      priceGroup: 'main'
+    };
+
+    const nav = document.getElementById('nav');
+    const cards = document.getElementById('cards');
+    const serviceFilter = document.getElementById('serviceFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const uiLang = document.getElementById('uiLang');
+    const scriptLang = document.getElementById('scriptLang');
+    const quickLang = document.getElementById('quickLang');
+    const search = document.getElementById('search');
+    const managerName = document.getElementById('managerName');
+    const officePhone = document.getElementById('officePhone');
+    const clientName = document.getElementById('clientName');
+
+    const GENERAL_SERVICE = 'Сценарії';
+
+    const uiText = {
+      uk: {
+        nav: {
+          scripts: ['Скрипти', 'копіювання'],
+          rules: ['❗ Стоп-правила', 'обовʼязково'],
+          prices: ['Ціни і терміни', 'шпаргалка'],
+          builder: ['Чернетка', 'свій текст'],
+          custom: ['⭐ Поза скриптами', 'інструкція']
+        },
+        allServices: 'Усі послуги',
+        allTypes: 'Усі типи',
+        search: 'Пошук: код 95, чип, доставка, дорого, не бере трубку...',
+        copy: 'Копіювати',
+        edit: 'Редагувати',
+        copied: 'Скопійовано',
+        empty: 'Нічого не знайдено. Спробуйте інший запит або використайте розділ “Чернетка”.',
+        ruVersion: 'Російська версія для менеджера',
+        clientVersion: 'Версія для клієнта',
+        priceTabs: { main: 'Головні послуги', code95: 'Код 95', chip: 'Чип-карта', adr: 'ADR', rights: 'Заміна прав', extra: 'Додаткові' },
+        table: ['Послуга', 'Варіант', 'Ціна', 'Термін', 'Ключові умови']
+      },
+      ru: {
+        nav: {
+          scripts: ['Скрипты', 'копирование'],
+          rules: ['❗ Стоп-правила', 'обязательно'],
+          prices: ['Цены и сроки', 'шпаргалка'],
+          builder: ['Черновик', 'свой текст'],
+          custom: ['⭐ Вне скриптов', 'инструкция']
+        },
+        allServices: 'Все услуги',
+        allTypes: 'Все типы',
+        search: 'Поиск: код 95, чип, доставка, дорого, не берет трубку...',
+        copy: 'Копировать',
+        edit: 'Редактировать',
+        copied: 'Скопировано',
+        empty: 'Ничего не найдено. Попробуйте другой запрос или используйте раздел “Черновик”.',
+        ruVersion: 'Русская версия для менеджера',
+        clientVersion: 'Версия для клиента',
+        priceTabs: { main: 'Главные услуги', code95: 'Код 95', chip: 'Чип-карта', adr: 'ADR', rights: 'Замена прав', extra: 'Дополнительные' },
+        table: ['Услуга', 'Вариант', 'Цена', 'Срок', 'Ключевые условия']
+      },
+      en: {
+        nav: {
+          scripts: ['Scripts', 'copy'],
+          rules: ['❗ Stop rules', 'mandatory'],
+          prices: ['Prices', 'reference'],
+          builder: ['Draft', 'custom text'],
+          custom: ['⭐ Outside scripts', 'guide']
+        },
+        allServices: 'All services',
+        allTypes: 'All types',
+        search: 'Search: code 95, chip, delivery, expensive, missed call...',
+        copy: 'Copy',
+        edit: 'Edit',
+        copied: 'Copied',
+        empty: 'Nothing found. Try another query or use Draft.',
+        ruVersion: 'Russian version for manager',
+        clientVersion: 'Client version',
+        priceTabs: { main: 'Main services', code95: 'Code 95', chip: 'Chip card', adr: 'ADR', rights: 'Licence exchange', extra: 'Additional' },
+        table: ['Service', 'Option', 'Price', 'Time', 'Key conditions']
+      }
+    };
+
+    const serviceAliases = {
+      'Загальні': GENERAL_SERVICE,
+      'Код 95': 'Код 95',
+      'Code 95': 'Код 95',
+      'Чип-карта': 'Чип-карта',
+      'Заміна коду 95': 'Заміна Code 95',
+      'ADR': 'ADR',
+      'Заміна прав': 'Заміна прав',
+      'Категорії B/C/CE': 'Категорії B/C/CE',
+      'Працевлаштування': 'Працевлаштування',
+      'Додаткові послуги': 'Додаткові послуги',
+      'Доставка': 'Доставка'
+    };
+
+    function canonicalService(value) {
+      return serviceAliases[value] || value;
+    }
+
+    function isGeneral(item) {
+      return canonicalService(item.service) === GENERAL_SERVICE;
+    }
+
+    function normalizeSearch(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replaceAll('code 95', 'код 95')
+        .replaceAll('kod 95', 'код 95')
+        .replaceAll('код95', 'код 95')
+        .replaceAll('code95', 'код 95')
+        .replaceAll('chip', 'чип')
+        .replaceAll('chip-card', 'чип карта')
+        .replaceAll('чіп', 'чип')
+        .replaceAll('ё', 'е')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function unique(values) {
+      return ['all', ...Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'uk'))];
+    }
+
+    function optionLabel(value, allLabel) {
+      return value === 'all' ? allLabel : value;
+    }
+
+    function displayServiceName(value) {
+      const map = {
+        uk: {
+          'Додаткові послуги': 'Додаткові послуги',
+          'Доставка': 'Доставка',
+          'Заміна прав': 'Заміна прав',
+          'Заміна Code 95': 'Заміна Code 95',
+          'Категорії B/C/CE': 'Категорії B/C/CE',
+          'Код 95': 'Код 95',
+          'Працевлаштування': 'Працевлаштування',
+          'Чип-карта': 'Чип-карта',
+          'ADR': 'ADR'
+        },
+        ru: {
+          'Додаткові послуги': 'Дополнительные услуги',
+          'Доставка': 'Доставка',
+          'Заміна прав': 'Замена прав',
+          'Заміна Code 95': 'Замена Code 95',
+          'Категорії B/C/CE': 'Категории B/C/CE',
+          'Код 95': 'Код 95',
+          'Працевлаштування': 'Трудоустройство',
+          'Чип-карта': 'Чип-карта',
+          'ADR': 'ADR'
+        },
+        en: {
+          'Додаткові послуги': 'Additional services',
+          'Доставка': 'Delivery',
+          'Заміна прав': 'Licence exchange',
+          'Заміна Code 95': 'Code 95 exchange',
+          'Категорії B/C/CE': 'Categories B/C/CE',
+          'Код 95': 'Code 95',
+          'Працевлаштування': 'Driver jobs',
+          'Чип-карта': 'Chip card',
+          'ADR': 'ADR'
+        }
+      };
+      return map[state.uiLang]?.[value] || value;
+    }
+
+    function t(key) {
+      return uiText[state.uiLang]?.[key] || uiText.uk[key];
+    }
+
+    function selectedClientLangName() {
+      const names = {
+        en: 'English',
+        ar: 'العربية المغربية',
+        tr: 'Türkçe'
+      };
+      return names[state.scriptLang] || state.scriptLang.toUpperCase();
+    }
+
+    function managerRuLabel() {
+      return 'Русская версия для менеджера';
+    }
+
+    function clientVersionLabel() {
+      if (state.scriptLang === 'en') return 'Client version: English';
+      if (state.scriptLang === 'ar') return 'نسخة العميل: العربية المغربية';
+      if (state.scriptLang === 'tr') return 'Müşteri versiyonu: Türkçe';
+      return t('clientVersion');
+    }
+
+    function translateText(text, lang) {
+      if (lang === 'uk') return text;
+      const ru = toRussian(text);
+      if (lang === 'ru') return ru;
+      if (lang === 'en') return toEnglish(ru);
+      if (lang === 'ar') return toMoroccan(ru);
+      if (lang === 'tr') return toTurkish(ru);
+      return text;
+    }
+
+    function serviceForMessage(service, lang = state.scriptLang) {
+      if (service === GENERAL_SERVICE) {
+        if (lang === 'ru') return 'вашей заявке';
+        if (lang === 'en') return 'your request';
+        if (lang === 'ar') return 'طلبك';
+        if (lang === 'tr') return 'başvurunuz';
+        return 'вашої заявки';
+      }
+      const names = {
+        ru: {
+          'Код 95': 'Code 95',
+          'Чип-карта': 'чип-карте',
+          'Заміна Code 95': 'замене Code 95',
+          'Заміна прав': 'замене прав',
+          'Доставка': 'доставке'
+        },
+        en: {
+          'Код 95': 'Code 95',
+          'Чип-карта': 'the tachograph chip card',
+          'Заміна Code 95': 'Code 95 exchange',
+          'Заміна прав': 'driving licence exchange',
+          'Доставка': 'delivery'
+        },
+        ar: {
+          'Код 95': 'Code 95',
+          'Чип-карта': 'بطاقة الشيب للتاشوغراف',
+          'Заміна Code 95': 'تبديل Code 95',
+          'Заміна прав': 'تبديل رخصة السياقة',
+          'Доставка': 'التوصيل'
+        },
+        tr: {
+          'Код 95': 'Code 95',
+          'Чип-карта': 'takograf çip kartı',
+          'Заміна Code 95': 'Code 95 değişimi',
+          'Заміна прав': 'ehliyet değişimi',
+          'Доставка': 'teslimat'
+        }
+      };
+      return names[lang]?.[service] || service;
+    }
+
+    function getScriptText(item, lang = state.scriptLang) {
+      if (item.texts?.[lang]) {
+        return hydrate(item.texts[lang], canonicalService(item.service), lang);
+      }
+      if (['en', 'ar', 'tr'].includes(lang)) {
+        return hydrate(curatedClientText(item, lang), canonicalService(item.service), lang);
+      }
+      const base = item.texts?.uk || item.text;
+      const text = lang === 'ru' ? curatedRussianText(item) : base;
+      return hydrate(text, canonicalService(item.service), lang);
+    }
+
+    function getRussianText(item) {
+      const base = item.texts?.ru || curatedRussianText(item);
+      return hydrate(base, canonicalService(item.service), 'ru');
+    }
+
+    function scenarioKey(item) {
+      const title = item.title.toLowerCase();
+      const service = canonicalService(item.service).toLowerCase();
+      if (title.includes('перший контакт')) return 'firstContact';
+      if (title.includes('не бере') || title.includes('труб')) return 'missedCall';
+      if (title.includes('немає можливості') || title.includes('говорити')) return 'busyCall';
+      if (title.includes('хоче саме дзвінок')) return 'callRequest';
+      if (title.includes('статус')) return 'processStatus';
+      if (title.includes('нестандарт')) return 'customCase';
+      if (title.includes('документ') && service.includes('чип')) return 'chipDocs';
+      if (service.includes('код 95') && title.includes('перші питання')) return 'code95Questions';
+      if (title.includes('короткий курс з приїздом')) return 'code95ShortVisit';
+      if (title.includes('короткий курс без')) return 'code95ShortRemote';
+      if (title.includes('довгий курс з екзаменом')) return 'code95LongExam';
+      if (title.includes('без екзамену через')) return 'code95LongLithuanian';
+      if (title.includes('довгий курс без приїзду')) return 'code95LongRemote';
+      if (title.includes('польський варіант дорого')) return 'code95Budget';
+      if (title.includes('молодий водій')) return 'youngDriver';
+      if (service.includes('чип') && title.includes('перші питання')) return 'chipQuestions';
+      if (title.includes('польського code 95')) return 'chipPolishCode';
+      if (title.includes('справки') || title.includes('гаі')) return 'chipPoliceCert';
+      if (title.includes('європейського code 95')) return 'chipEuCode';
+      if (title.includes('киргиз')) return 'chipKyrgyz';
+      if (title.includes('анулювання')) return 'chipCancel';
+      if (service.includes('adr') && title.includes('перші питання')) return 'adrQuestions';
+      if (title.includes('польський adr')) return 'adrPolish';
+      if (title.includes('казах')) return 'adrKz';
+      if (service.includes('прав') && title.includes('перші питання')) return 'rightsQuestions';
+      if (service.includes('прав')) return 'rightsExchange';
+      if (title.includes('запросити дані')) return 'deliveryData';
+      if (title.includes('доставка: ціни')) return 'deliveryPrices';
+      if (title.includes('адреса')) return 'address';
+      if (title.includes('дорого')) return 'objectionPrice';
+      if (title.includes('подумаю')) return 'objectionThink';
+      if (title.includes('не може приїхати')) return 'remoteOption';
+      return 'generic';
+    }
+
+    const scenarioMessages = {
+      firstContact: {
+        ru: `Добрый день! Это {manager} из Amazonikk, мы только что общались по поводу {service}.\n\nКак договорились, отправьте, пожалуйста, фото документов сюда. Я проверю, всё ли в порядке, и сориентирую вас по стоимости, срокам и ближайшим датам.\n\nДля начала нужны: загранпаспорт, водительское удостоверение с двух сторон, Code 95 или чип-карта, если уже есть.\n\nЯ на связи.`,
+        en: `Good afternoon! This is {manager} from Amazonikk. We have just spoken about {service}.\n\nAs agreed, please send photos of your documents here. I will check them and confirm the price, timing and nearest available dates.\n\nTo start, we need your passport, both sides of your driving licence, and Code 95 or a chip card if you already have one.\n\nI am available if you have any questions.`,
+        ar: `السلام عليكم، معك {manager} من Amazonikk. تحدثنا قبل قليل بخصوص {service}.\n\nكما اتفقنا، أرسل من فضلك صور الوثائق هنا. سأراجعها وأخبرك بالسعر، المدة، وأقرب موعد متاح.\n\nفي البداية نحتاج: جواز السفر، رخصة السياقة من الجهتين، و Code 95 أو بطاقة الشيب إذا كانت عندك.\n\nأنا في الخدمة إذا كان لديك أي سؤال.`,
+        tr: `Merhaba, ben Amazonikk'ten {manager}. Az önce {service} hakkında konuşmuştuk.\n\nAnlaştığımız gibi lütfen belgelerinizin fotoğraflarını buraya gönderin. Kontrol edip fiyatı, süreyi ve en yakın tarihleri size bildireceğim.\n\nBaşlamak için pasaport, ehliyetin iki yüzü ve varsa Code 95 veya çip kart gerekiyor.\n\nSorularınız olursa buradayım.`
+      },
+      missedCall: {
+        ru: `Добрый день{client}! Это {manager}, компания Amazonikk.\n\nВы оставляли заявку по документам для водителя. Я не смогла дозвониться.\n\nНапишите, пожалуйста, когда вам удобно поговорить, или можем спокойно обсудить всё здесь в переписке.`,
+        en: `Good afternoon{client}! This is {manager} from Amazonikk.\n\nYou left a request about driver documents. I could not reach you by phone.\n\nPlease let me know when it is convenient to talk, or we can discuss everything here by message.`,
+        ar: `السلام عليكم{client}! معك {manager} من شركة Amazonikk.\n\nتركت طلباً بخصوص وثائق السائق، ولم أتمكن من الوصول إليك عبر الهاتف.\n\nاكتب من فضلك متى يكون مناسباً أن نتحدث، أو يمكننا مناقشة كل شيء هنا بالرسائل.`,
+        tr: `Merhaba{client}! Ben Amazonikk'ten {manager}.\n\nSürücü belgeleriyle ilgili başvuru bırakmıştınız. Size telefonla ulaşamadım.\n\nLütfen ne zaman konuşmanız uygun olur yazın ya da tüm detayları buradan mesajla görüşebiliriz.`
+      },
+      busyCall: {
+        ru: `Извините, сейчас в офисе большая нагрузка, поэтому не могу нормально поговорить по телефону.\n\nЕсли вам удобно, давайте обсудим детали здесь в переписке. Так я быстрее проверю вашу ситуацию и ничего не пропущу.\n\nЕсли всё же удобнее по телефону, напишите, пожалуйста, когда вам лучше перезвонить.`,
+        en: `Sorry, the office is very busy at the moment, so I cannot speak properly by phone right now.\n\nIf it is convenient for you, we can discuss the details here by message. This will help me check your situation faster and not miss anything.\n\nIf a phone call is still better for you, please write when I should call you back.`,
+        ar: `نعتذر، في الوقت الحالي يوجد ضغط كبير في المكتب، لذلك لا أستطيع التحدث جيداً عبر الهاتف الآن.\n\nإذا كان مناسباً لك، يمكننا مناقشة التفاصيل هنا بالرسائل. هكذا أستطيع مراجعة وضعك بسرعة وبدون أن يفوتني شيء.\n\nإذا كنت تفضل الاتصال الهاتفي، اكتب من فضلك الوقت المناسب لأتصل بك لاحقاً.`,
+        tr: `Kusura bakmayın, şu anda ofiste yoğunluk var, bu yüzden telefonda sağlıklı şekilde konuşamıyorum.\n\nSizin için uygunsa detayları buradan mesajla konuşalım. Böylece durumunuzu daha hızlı kontrol ederim ve hiçbir şeyi kaçırmam.\n\nYine de telefonla konuşmak isterseniz, lütfen sizi ne zaman aramam gerektiğini yazın.`
+      },
+      callRequest: {
+        ru: `Да, можем созвониться.\n\nНапишите, пожалуйста, в какое время вам сегодня удобно. Также коротко укажите вопрос: Code 95, чип-карта, ADR, замена прав или другая услуга.\n\nЯ подготовлю информацию перед звонком.`,
+        en: `Yes, we can have a call.\n\nPlease write what time is convenient for you today. Also briefly mention the topic: Code 95, chip card, ADR, driving licence exchange or another service.\n\nI will prepare the information before the call.`,
+        ar: `نعم، يمكننا إجراء مكالمة.\n\nاكتب من فضلك الوقت المناسب لك اليوم. واذكر باختصار الموضوع: Code 95، بطاقة الشيب، ADR، تبديل رخصة السياقة أو خدمة أخرى.\n\nسأحضّر المعلومات قبل الاتصال.`,
+        tr: `Evet, telefonda görüşebiliriz.\n\nLütfen bugün sizin için uygun saati yazın. Ayrıca konuyu kısaca belirtin: Code 95, çip kart, ADR, ehliyet değişimi veya başka bir hizmet.\n\nAramadan önce bilgileri hazırlayacağım.`
+      },
+      processStatus: {
+        ru: `По вашему текущему процессу лучше написать на наш офисный номер: {officePhone}\n\nКоллеги в офисе проверят информацию по вашей заявке и дадут актуальный ответ по статусу документа.`,
+        en: `For your current process, please write to our office number: {officePhone}\n\nOur office team will check your application and give you the latest update about your document status.`,
+        ar: `بخصوص ملفك الحالي، من الأفضل أن تكتب إلى رقم المكتب: {officePhone}\n\nسيقوم فريق المكتب بمراجعة طلبك وإعطائك آخر تحديث عن حالة الوثيقة.`,
+        tr: `Mevcut süreciniz için lütfen ofis numaramıza yazın: {officePhone}\n\nOfisteki arkadaşlarımız başvurunuzu kontrol edip belgenizin güncel durumu hakkında bilgi verecek.`
+      },
+      customCase: {
+        ru: `Если по вашей ситуации нет готового ответа, я сначала проверю детали и правила, чтобы не дать неверную информацию.\n\nНапишите, пожалуйста, какая услуга нужна, какие документы уже есть, есть ли незакрытые платежи и нужен вариант с приездом или онлайн.\n\nПосле проверки дам точный ответ.`,
+        en: `If there is no ready answer for your situation, I will first check the details and rules so I do not give you incorrect information.\n\nPlease write which service you need, which documents you already have, whether there are any unpaid balances, and whether you need an in-person or online option.\n\nAfter checking, I will give you an exact answer.`,
+        ar: `إذا لم يكن هناك جواب جاهز لحالتك، سأراجع التفاصيل والقواعد أولاً حتى لا أعطيك معلومة غير صحيحة.\n\nاكتب من فضلك الخدمة المطلوبة، ما هي الوثائق الموجودة لديك، هل توجد مبالغ غير مدفوعة، وهل تحتاج الخدمة بالحضور أو أونلاين.\n\nبعد المراجعة سأعطيك جواباً دقيقاً.`,
+        tr: `Durumunuz için hazır bir cevap yoksa, yanlış bilgi vermemek için önce detayları ve kuralları kontrol edeceğim.\n\nLütfen hangi hizmete ihtiyacınız olduğunu, hangi belgelerin sizde olduğunu, açık ödeme olup olmadığını ve işlemin ofiste mi yoksa online mı yapılacağını yazın.\n\nKontrolden sonra size net cevap vereceğim.`
+      }
+    };
+
+    function fallbackRussian(item) {
+      const service = canonicalService(item.service);
+      if (service.includes('Код 95')) {
+        return `По услуге Code 95 нужно уточнить вашу ситуацию: категория прав, дата открытия категории, гражданство, тип прав и можете ли вы приехать в Варшаву.\n\nПосле проверки я подберу правильный вариант, срок и стоимость.`;
+      }
+      if (service.includes('Чип')) {
+        return `По чип-карте нужно проверить основание оформления и старую карту, если она была.\n\nОтправьте, пожалуйста, паспорт, права, фото, PESEL если есть, Code 95 или справку из ГАИ, а также фото старой чип-карты или напишите, что чип-карты не было.`;
+      }
+      if (service.includes('ADR')) {
+        return `По ADR нужно уточнить, какой вариант нужен: базовый или база + цистерна, а также знаете ли вы польский язык.\n\nПосле этого я скажу подходящий вариант, стоимость и сроки.`;
+      }
+      if (service.includes('прав')) {
+        return `По замене прав нужно проверить гражданство, тип прав, легализацию в Польше больше 185 дней и прописку.\n\nОтправьте, пожалуйста, фото прав и документа легализации, чтобы я могла проверить возможность оформления.`;
+      }
+      return `Уточните, пожалуйста, какая именно услуга вам нужна и какие документы у вас уже есть.\n\nЯ проверю ситуацию и дам точный ответ по условиям, стоимости и срокам.`;
+    }
+
+    function fallbackClient(item, lang) {
+      const service = canonicalService(item.service);
+      const variants = {
+        en: {
+          code95: `For Code 95, we need to check your situation: licence category, the date when the category was opened, citizenship, type of driving licence, and whether you can come to Warsaw.\n\nAfter checking this, I will offer the correct option, timing and price.`,
+          chip: `For the tachograph chip card, we need to check the basis for application and whether you had an old card before.\n\nPlease send your passport, driving licence, personal photo, PESEL if you have it, Code 95 or a traffic police certificate, and a photo of the old chip card or write that you did not have one.`,
+          adr: `For ADR, please specify which option you need: basic ADR or basic + tank. Also let us know whether you speak Polish.\n\nAfter that, I will confirm the suitable option, price and timing.`,
+          rights: `For driving licence exchange, we need to check your citizenship, type of licence, legal stay in Poland for more than 185 days, and registration address.\n\nPlease send photos of your licence and residence document so I can check whether we can process it.`,
+          generic: `Please write which service you need and which documents you already have.\n\nI will check your situation and give you exact conditions, price and timing.`
+        },
+        ar: {
+          code95: `بالنسبة إلى Code 95، نحتاج إلى مراجعة وضعك: فئة رخصة السياقة، تاريخ فتح الفئة، الجنسية، نوع الرخصة، وهل يمكنك الحضور إلى وارسو.\n\nبعد المراجعة سأقترح عليك الخيار الصحيح، المدة والسعر.`,
+          chip: `بالنسبة إلى بطاقة الشيب للتاشوغراف، نحتاج إلى معرفة على أي أساس سيتم تقديم الطلب وهل كانت لديك بطاقة قديمة من قبل.\n\nأرسل من فضلك: جواز السفر، رخصة السياقة، صورتك الشخصية، PESEL إذا كان لديك، Code 95 أو شهادة من شرطة المرور، وصورة البطاقة القديمة أو اكتب أنك لم تكن تملك بطاقة شيب.`,
+          adr: `بالنسبة إلى ADR، اكتب من فضلك الخيار المطلوب: أساسي أو أساسي + صهريج. واذكر أيضاً هل تتكلم البولندية.\n\nبعد ذلك سأؤكد لك الخيار المناسب، السعر والمدة.`,
+          rights: `بالنسبة إلى تبديل رخصة السياقة، نحتاج إلى مراجعة الجنسية، نوع الرخصة، الإقامة القانونية في بولندا لأكثر من 185 يوماً، والتسجيل السكني.\n\nأرسل من فضلك صور الرخصة ووثيقة الإقامة حتى أتحقق من إمكانية التقديم.`,
+          generic: `اكتب من فضلك ما هي الخدمة التي تحتاجها وما هي الوثائق الموجودة لديك.\n\nسأراجع وضعك وأعطيك الشروط الدقيقة، السعر والمدة.`
+        },
+        tr: {
+          code95: `Code 95 için durumunuzu kontrol etmemiz gerekiyor: ehliyet kategorisi, kategorinin açılış tarihi, vatandaşlık, ehliyet türü ve Varşova'ya gelip gelemeyeceğiniz.\n\nKontrolden sonra doğru seçeneği, süreyi ve fiyatı bildireceğim.`,
+          chip: `Takograf çip kartı için başvuru dayanağını ve daha önce eski kartınız olup olmadığını kontrol etmemiz gerekiyor.\n\nLütfen pasaport, ehliyet, kişisel fotoğraf, varsa PESEL, Code 95 veya trafik polisinden belge ve eski çip kart fotoğrafını gönderin ya da daha önce çip kartınız olmadığını yazın.`,
+          adr: `ADR için hangi seçeneğe ihtiyacınız olduğunu yazın: temel ADR veya temel + tanker. Ayrıca Lehçe bilip bilmediğinizi belirtin.\n\nBuna göre uygun seçeneği, fiyatı ve süreyi bildireceğim.`,
+          rights: `Ehliyet değişimi için vatandaşlık, ehliyet türü, Polonya'da 185 günden fazla yasal kalış ve adres kaydı kontrol edilmelidir.\n\nİşlem yapılıp yapılamayacağını kontrol etmem için lütfen ehliyet ve oturum belgenizin fotoğraflarını gönderin.`,
+          generic: `Lütfen hangi hizmete ihtiyacınız olduğunu ve hangi belgelerin sizde olduğunu yazın.\n\nDurumunuzu kontrol edip size net şartları, fiyatı ve süreyi bildireceğim.`
+        }
+      };
+      let key = 'generic';
+      if (service.includes('Код 95')) key = 'code95';
+      if (service.includes('Чип')) key = 'chip';
+      if (service.includes('ADR')) key = 'adr';
+      if (service.includes('прав')) key = 'rights';
+      return variants[lang][key];
+    }
+
+    function curatedRussianText(item) {
+      const key = scenarioKey(item);
+      return scenarioMessages[key]?.ru || fallbackRussian(item);
+    }
+
+    function curatedClientText(item, lang) {
+      const key = scenarioKey(item);
+      return scenarioMessages[key]?.[lang] || fallbackClient(item, lang);
+    }
+
+    function toRussian(text) {
+      const pairs = [
+        ['Добрий день', 'Добрый день'],
+        ['Перепрошую', 'Извините'],
+        ['будь ласка', 'пожалуйста'],
+        ['вартість', 'стоимость'],
+        ['термін', 'срок'],
+        ['приблизно', 'примерно'],
+        ['потрібно', 'нужно'],
+        ['приїхати', 'приехать'],
+        ['Варшаву', 'Варшаву'],
+        ['документи', 'документы'],
+        ['водійське посвідчення', 'водительское удостоверение'],
+        ['закордонний паспорт', 'загранпаспорт'],
+        ['чип-карта', 'чип-карта'],
+        ['Чип-карта', 'Чип-карта'],
+        ['польський', 'польский'],
+        ['литовський', 'литовский'],
+        ['онлайн', 'онлайн'],
+        ['без приїзду', 'без приезда'],
+        ['під ключ', 'под ключ'],
+        ['надіслати', 'отправить'],
+        ['скани', 'сканы'],
+        ['фото', 'фото'],
+        ['клієнт', 'клиент'],
+        ['клієнту', 'клиенту'],
+        ['права', 'права'],
+        ['підпис', 'подпись'],
+        ['білий', 'белый'],
+        ['білому', 'белом'],
+        ['якщо', 'если'],
+        ['є', 'есть'],
+        ['немає', 'нет'],
+        ['можемо', 'можем'],
+        ['можна', 'можно'],
+        ['після', 'после'],
+        ['перед', 'перед'],
+        ['уточніть', 'уточните'],
+        ['відправляємо', 'отправляем'],
+        ['не відправляємо', 'не отправляем'],
+        ['робочих днів', 'рабочих дней'],
+        ['тижні', 'недели'],
+        ['місяць', 'месяц']
+      ];
+      let out = text;
+      pairs.forEach(([from, to]) => { out = out.replaceAll(from, to); });
+      return out;
+    }
+
+    function toEnglish(text) {
+      return `Hello! Please check the details below.\n\n${text}\n\nIf anything is unclear, please send your documents/photos here and we will check your situation.`;
+    }
+
+    function toMoroccan(text) {
+      return `Salam! Afak qra had l-ma3loumat.\n\n${text}\n\nIla kan chi soual, sifter lina tsawer dyal l-wata2iq hna bach nverifiw l-wad3 dyalek.`;
+    }
+
+    function toTurkish(text) {
+      return `Merhaba! Lütfen aşağıdaki bilgileri kontrol edin.\n\n${text}\n\nBir sorunuz varsa belgelerin fotoğraflarını buraya gönderin, durumunuzu kontrol edelim.`;
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function getVars(service, lang = state.scriptLang) {
+      const client = clientName.value.trim();
+      return {
+        manager: managerName.value.trim() || '[імʼя менеджера]',
+        officePhone: officePhone.value.trim() || '[офісний номер]',
+        client: client ? `, ${client}` : '',
+        service: serviceForMessage(service, lang) || '[послуга]'
+      };
+    }
+
+    function hydrate(text, service, lang = state.scriptLang) {
+      const vars = getVars(service, lang);
+      return text
+        .replaceAll('{manager}', vars.manager)
+        .replaceAll('{officePhone}', vars.officePhone)
+        .replaceAll('{client}', vars.client)
+        .replaceAll('{service}', vars.service);
+    }
+
+    function copyText(text, button) {
+      navigator.clipboard.writeText(text).then(() => {
+        const previous = button.textContent;
+        button.textContent = t('copied');
+        button.classList.add('done');
+        setTimeout(() => {
+          button.textContent = previous;
+          button.classList.remove('done');
+        }, 1500);
+      });
+    }
+
+    function renderNav() {
+      const labels = uiText[state.uiLang].nav;
+      nav.innerHTML = navItems.map(item => `
+        <button class="${state.section === item.id ? 'active' : ''} ${item.tone === 'danger' ? 'danger-nav' : ''} ${item.tone === 'warn' ? 'warn-nav' : ''}" data-section="${item.id}">
+          <span>${labels[item.id]?.[0] || item.label}</span>
+          <small>${labels[item.id]?.[1] || item.count}</small>
+        </button>
+      `).join('');
+    }
+
+    function renderFilters() {
+      const services = unique(templates.map(item => canonicalService(item.service)).filter(item => item !== GENERAL_SERVICE));
+      const types = unique(templates.map(item => item.type));
+      serviceFilter.innerHTML = services.map(value => `<option value="${escapeHtml(value)}">${value === 'all' ? t('allServices') : escapeHtml(displayServiceName(value))}</option>`).join('');
+      typeFilter.innerHTML = types.map(value => `<option value="${escapeHtml(value)}">${optionLabel(value, t('allTypes'))}</option>`).join('');
+      serviceFilter.value = state.service;
+      typeFilter.value = state.type;
+      search.placeholder = t('search');
+    }
+
+    function tagClass(tag) {
+      const value = tag.toLowerCase();
+      if (value.includes('важливо') || value.includes('обов')) return 'danger';
+      if (value.includes('уточн') || value.includes('єс') || value.includes('185')) return 'warn';
+      if (value.includes('онлайн') || value.includes('без приїзду')) return 'good';
+      if (value.includes('ціна') || value.includes('зл') || value.includes('eur')) return 'blue';
+      return '';
+    }
+
+    function renderCards() {
+      const q = normalizeSearch(state.query);
+      const filtered = templates.filter(item => {
+        const service = canonicalService(item.service);
+        const allText = [
+          item.title,
+          service,
+          item.service,
+          item.type,
+          item.tags.join(' '),
+          item.text || '',
+          item.texts ? Object.values(item.texts).join(' ') : '',
+          service === 'Код 95' ? 'код 95 code 95 kod 95' : '',
+          service === 'Чип-карта' ? 'чип чіп chip chip card tachograph' : ''
+        ].join(' ');
+        const haystack = normalizeSearch(allText);
+        return (state.service === 'all' || service === state.service || isGeneral(item))
+          && (state.type === 'all' || item.type === state.type)
+          && (!q || haystack.includes(q));
+      }).sort((a, b) => {
+        if (state.service === 'all') return 0;
+        const ag = isGeneral(a) ? 1 : 0;
+        const bg = isGeneral(b) ? 1 : 0;
+        return ag - bg;
+      });
+
+      if (!filtered.length) {
+        cards.innerHTML = `<div class="empty">${escapeHtml(t('empty'))}</div>`;
+        return;
+      }
+
+      cards.innerHTML = filtered.map((item, index) => {
+        const text = getScriptText(item);
+        const ruText = getRussianText(item);
+        const isDual = ['en', 'ar', 'tr'].includes(state.scriptLang);
+        const messageHtml = isDual
+          ? `<div class="msg dual">
+              <div class="translation-box"><strong>${escapeHtml(managerRuLabel())}</strong>${escapeHtml(ruText)}</div>
+              <div class="translation-box"><strong>${escapeHtml(clientVersionLabel())}</strong>${escapeHtml(text)}</div>
+            </div>`
+          : `<div class="msg">${escapeHtml(text)}</div>`;
+        return `
+          <article class="card" data-index="${index}">
+            <div class="card-head">
+              <h2 class="card-title">${escapeHtml(item.title)}</h2>
+              <div class="tags">
+                <span class="tag blue">${escapeHtml(canonicalService(item.service))}</span>
+                <span class="tag">${escapeHtml(item.type)}</span>
+                ${item.tags.map(tag => `<span class="tag ${tagClass(tag)}">${escapeHtml(tag)}</span>`).join('')}
+              </div>
+            </div>
+            ${messageHtml}
+            <div class="card-actions">
+              <button class="btn primary" data-copy="${templates.indexOf(item)}">${escapeHtml(t('copy'))}</button>
+              <button class="btn" data-edit="${templates.indexOf(item)}">${escapeHtml(t('edit'))}</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderRules() {
+      document.getElementById('rulesList').innerHTML = rules.map(rule => `
+        <article class="rule ${rule.tone}">
+          <h3>${escapeHtml(rule.title)}</h3>
+          <p>${escapeHtml(rule.body)}</p>
+        </article>
+      `).join('');
+    }
+
+    function renderPrices() {
+      const tabs = [
+        ['main', t('priceTabs').main],
+        ['code95', t('priceTabs').code95],
+        ['chip', t('priceTabs').chip],
+        ['adr', t('priceTabs').adr],
+        ['rights', t('priceTabs').rights],
+        ['extra', t('priceTabs').extra]
+      ];
+      document.getElementById('priceTabs').innerHTML = tabs.map(([id, label]) => `
+        <button class="price-tab ${state.priceGroup === id ? 'active' : ''}" data-price-group="${id}">${escapeHtml(label)}</button>
+      `).join('');
+      const tableLabels = [t('table')[0], t('table')[1], 'PLN', 'EUR', t('table')[3], t('table')[4]];
+      document.querySelector('#prices thead tr').innerHTML = tableLabels.map(label => `<th>${escapeHtml(label)}</th>`).join('');
+      const filtered = priceRows.filter(row => {
+        const service = normalizeSearch(row[0]);
+        if (state.priceGroup === 'main') return ['код 95', 'чип-карта', 'adr', 'замена прав', 'заміна прав'].some(name => service.includes(name));
+        if (state.priceGroup === 'code95') return service.includes('код 95') || service.includes('code 95');
+        if (state.priceGroup === 'chip') return service.includes('чип');
+        if (state.priceGroup === 'adr') return service.includes('adr');
+        if (state.priceGroup === 'rights') return service.includes('прав');
+        if (state.priceGroup === 'extra') return service.includes('додатков') || service.includes('дополнитель');
+        return true;
+      });
+      document.getElementById('pricesBody').innerHTML = filtered.map(row => {
+        const translated = translatePriceRow(row);
+        const price = splitPrice(translated[2]);
+        const cells = [translated[0], translated[1], price.pln, price.eur, translated[3], translated[4]];
+        return `<tr>${cells.map((cell, index) => `<td data-label="${escapeHtml(tableLabels[index])}">${escapeHtml(cell)}</td>`).join('')}</tr>`;
+      }).join('');
+    }
+
+    function splitPrice(value) {
+      const text = String(value || '');
+      const plnMatch = text.match(/(?:\+?\s*)?[\d\s]+(?:[-–]\d+)?\s*(?:зл|PLN)/i);
+      const eurMatch = text.match(/(?:\+?\s*)?[\d\s]+(?:[-–]\d+)?\s*(?:євро|евро|EUR|€)/i);
+      return {
+        pln: plnMatch ? cleanCurrencyValue(plnMatch[0]) : '',
+        eur: eurMatch ? cleanCurrencyValue(eurMatch[0]) : ''
+      };
+    }
+
+    function cleanCurrencyValue(value) {
+      return String(value || '')
+        .replace(/зл|PLN|євро|евро|EUR|€/gi, '')
+        .trim();
+    }
+
+    function translatePriceRow(row) {
+      return [
+        translatePriceCell(row[0]),
+        translatePriceCell(row[1]),
+        row[2],
+        translatePriceCell(row[3]),
+        translatePriceCell(row[4])
+      ];
+    }
+
+    function translatePriceCell(value) {
+      const text = String(value || '');
+      if (state.uiLang === 'uk') return text;
+      const map = priceTranslations[state.uiLang] || {};
+      return map[text] || text;
+    }
+
+    const priceTranslations = {
+      ru: {
+        'Код 95': 'Код 95',
+        'Заміна Code 95': 'Замена Code 95',
+        'Чип-карта': 'Чип-карта',
+        'Заміна прав': 'Замена прав',
+        'Додаткові': 'Дополнительные',
+        'Короткий курс з приїздом': 'Короткий курс с приездом',
+        'Короткий курс без приїзду': 'Короткий курс без приезда',
+        'Довгий курс з екзаменом': 'Длинный курс с экзаменом',
+        'Довгий без екзамену через литовський': 'Длинный без экзамена через литовский',
+        'Довгий без приїзду': 'Длинный без приезда',
+        'Литовський QR на польський': 'Литовский QR на польский',
+        'Старий паперовий литовський': 'Старый бумажный литовский',
+        'Литовський без приїзду': 'Литовский без приезда',
+        'Польський на новий': 'Польский на новый',
+        'На підставі польського Code 95': 'На основании польского Code 95',
+        'На підставі справки з ГАІ': 'На основании справки из ГАИ',
+        'На підставі європейського Code 95': 'На основании европейского Code 95',
+        'Киргизький варіант': 'Киргизский вариант',
+        'Анулювання української чип-карти': 'Аннулирование украинской чип-карты',
+        'Польський базовий': 'Польский базовый',
+        'Польський база + цистерна': 'Польский база + цистерна',
+        'Казахський/узбецький базовий': 'Казахский/узбекский базовый',
+        'Казахський/узбецький база + цистерна': 'Казахский/узбекский база + цистерна',
+        'Іноземні на польські': 'Иностранные на польские',
+        'Онлайн оформлення': 'Онлайн оформление',
+        'Онлайн PESEL': 'Онлайн PESEL',
+        'Прописка Варшава 3 міс.': 'Прописка Варшава 3 мес.',
+        '4-5 тижнів': '4-5 недель',
+        'приблизно 6 тижнів': 'примерно 6 недель',
+        'приблизно 35 робочих днів': 'примерно 35 рабочих дней',
+        '6-7 тижнів': '6-7 недель',
+        'залежить від процесу': 'зависит от процесса',
+        'приблизно 1 місяць': 'примерно 1 месяц',
+        '3-4 тижні': '3-4 недели',
+        '2-4 тижні': '2-4 недели',
+        '12-14 робочих днів': '12-14 рабочих дней',
+        'приблизно 2 тижні': 'примерно 2 недели',
+        'карта 2-3 тижні після екзамену': 'карта 2-3 недели после экзамена',
+        'індивідуально': 'индивидуально',
+        'Приїзд у Варшаву на півдня': 'Приезд в Варшаву на полдня',
+        'Тільки на території ЄС, мед/псих не відправляємо': 'Только на территории ЕС, мед/псих не отправляем',
+        'Навчання 21 день, екзамен WORD': 'Обучение 21 день, экзамен WORD',
+        'Спочатку литовський, потім заміна на польський': 'Сначала литовский, потом замена на польский',
+        'Тільки ЄС, мед/псих не відправляємо': 'Только ЕС, мед/псих не отправляем',
+        'З приїздом': 'С приездом',
+        'З продовженням на 5 років': 'С продлением на 5 лет',
+        'Клієнт має бути в ЄС': 'Клиент должен быть в ЕС',
+        'Залежить від уженду': 'Зависит от уженда',
+        'Номер на правах і коді має співпадати': 'Номер на правах и коде должен совпадать',
+        'Справка не старше 2 місяців': 'Справка не старше 2 месяцев',
+        'Словацький код не беремо': 'Словацкий код не берем',
+        'Тільки паспорт і права': 'Только паспорт и права',
+        'Потрібне, якщо стара карта активна': 'Нужно, если старая карта активна',
+        'Польська мова, екзамен': 'Польский язык, экзамен',
+        'Без приїзду і без екзамену': 'Без приезда и без экзамена',
+        '185 днів у Польщі, прописка': '185 дней в Польше, прописка',
+        'Оригінал справки з апостилем поштою': 'Оригинал справки с апостилем почтой',
+        'Тільки паспорт': 'Только паспорт',
+        'Дистанційно': 'Дистанционно',
+        'Для прав потрібна польська легалізація 6+ місяців': 'Для прав нужна польская легализация 6+ месяцев'
+      },
+      en: {
+        'Код 95': 'Code 95',
+        'Заміна Code 95': 'Code 95 exchange',
+        'Чип-карта': 'Chip card',
+        'Заміна прав': 'Licence exchange',
+        'Додаткові': 'Additional',
+        'Короткий курс з приїздом': 'Short course with visit',
+        'Короткий курс без приїзду': 'Short course without visit',
+        'Довгий курс з екзаменом': 'Long course with exam',
+        'Довгий без екзамену через литовський': 'Long course without exam via Lithuanian code',
+        'Довгий без приїзду': 'Long course without visit',
+        'Литовський QR на польський': 'Lithuanian QR to Polish',
+        'Старий паперовий литовський': 'Old paper Lithuanian',
+        'Литовський без приїзду': 'Lithuanian without visit',
+        'Польський на новий': 'Polish code renewal',
+        'На підставі польського Code 95': 'Based on Polish Code 95',
+        'На підставі справки з ГАІ': 'Based on traffic police certificate',
+        'На підставі європейського Code 95': 'Based on European Code 95',
+        'Киргизький варіант': 'Kyrgyz option',
+        'Анулювання української чип-карти': 'Ukrainian chip card cancellation',
+        'Польський базовий': 'Polish basic',
+        'Польський база + цистерна': 'Polish basic + tank',
+        'Казахський/узбецький базовий': 'Kazakh/Uzbek basic',
+        'Казахський/узбецький база + цистерна': 'Kazakh/Uzbek basic + tank',
+        'Іноземні на польські': 'Foreign licence to Polish',
+        'Онлайн оформлення': 'Online processing',
+        'Онлайн PESEL': 'Online PESEL',
+        'Прописка Варшава 3 міс.': 'Warsaw registration, 3 months',
+        '4-5 тижнів': '4-5 weeks',
+        'приблизно 6 тижнів': 'about 6 weeks',
+        'приблизно 35 робочих днів': 'about 35 business days',
+        '6-7 тижнів': '6-7 weeks',
+        'залежить від процесу': 'depends on the process',
+        'приблизно 1 місяць': 'about 1 month',
+        '3-4 тижні': '3-4 weeks',
+        '2-4 тижні': '2-4 weeks',
+        '12-14 робочих днів': '12-14 business days',
+        'приблизно 2 тижні': 'about 2 weeks',
+        'карта 2-3 тижні після екзамену': 'card 2-3 weeks after exam',
+        'індивідуально': 'individual',
+        'Приїзд у Варшаву на півдня': 'Half-day visit to Warsaw',
+        'Тільки на території ЄС, мед/псих не відправляємо': 'EU only, medical/psych documents are not sent',
+        'Навчання 21 день, екзамен WORD': '21-day training, WORD exam',
+        'Спочатку литовський, потім заміна на польський': 'Lithuanian first, then exchange to Polish',
+        'Тільки ЄС, мед/псих не відправляємо': 'EU only, medical/psych documents are not sent',
+        'З приїздом': 'With visit',
+        'З продовженням на 5 років': 'Extended for 5 years',
+        'Клієнт має бути в ЄС': 'Client must be in the EU',
+        'Залежить від уженду': 'Depends on the office',
+        'Номер на правах і коді має співпадати': 'Licence and code numbers must match',
+        'Справка не старше 2 місяців': 'Certificate must be no older than 2 months',
+        'Словацький код не беремо': 'Slovak code is not accepted',
+        'Тільки паспорт і права': 'Passport and driving licence only',
+        'Потрібне, якщо стара карта активна': 'Required if the old card is active',
+        'Польська мова, екзамен': 'Polish language, exam',
+        'Без приїзду і без екзамену': 'No visit and no exam',
+        '185 днів у Польщі, прописка': '185 days in Poland, registration',
+        'Оригінал справки з апостилем поштою': 'Original apostilled certificate by post',
+        'Тільки паспорт': 'Passport only',
+        'Дистанційно': 'Remote',
+        'Для прав потрібна польська легалізація 6+ місяців': 'Polish legal stay for 6+ months is required for licences'
+      }
+    };
+
+    function renderCustom() {
+      const content = {
+        uk: {
+          title: '⭐ Ситуація поза скриптами',
+          intro: 'Якщо готової відповіді немає: напишіть коротку відповідь самостійно, перевірте її по стоп-правилах, за потреби перекладіть через ChatGPT і тільки після цього відправляйте клієнту.',
+          bullets: [
+            'Не надсилайте в ChatGPT паспортні дані, телефони, email, фото документів або інші персональні дані клієнтів.',
+            'Не завантажуйте документи клієнтів.',
+            'Якщо є борг, онлайн мед/псих, литовський код або рекомендація іншої компанії - спочатку погодити з керівником.',
+            'Відповіді ChatGPT обовʼязково перевіряти: модель може помилятися.'
+          ],
+          promptTitle: 'Промпт для перекладу',
+          promptIntro: 'Скопіюйте в ChatGPT:',
+          prompt: 'Переклади це повідомлення для клієнта на [мова]. Збережи ввічливий діловий тон, не додавай нових умов, цін або обіцянок. Якщо в тексті є службові слова для менеджера - не перекладай їх як частину повідомлення клієнту. Ось текст: [вставити повідомлення]',
+          accessTitle: 'Доступ до робочого ChatGPT',
+          access: 'Доступ запитуйте в Telegram:',
+          notes: [
+            'Один чат = одна тема.',
+            'Для регулярних задач використовуйте окремий проект.',
+            'Для одноразових задач створюйте новий чат.'
+          ]
+        },
+        ru: {
+          title: '⭐ Ситуация вне скриптов',
+          intro: 'Если готового ответа нет: напишите короткий ответ самостоятельно, проверьте его по стоп-правилам, при необходимости переведите через ChatGPT и только после этого отправляйте клиенту.',
+          bullets: [
+            'Не отправляйте в ChatGPT паспортные данные, телефоны, email, фото документов или другие персональные данные клиентов.',
+            'Не загружайте документы клиентов.',
+            'Если есть долг, онлайн мед/псих, литовский код или рекомендация другой компании - сначала согласовать с руководителем.',
+            'Ответы ChatGPT обязательно проверять: модель может ошибаться.'
+          ],
+          promptTitle: 'Промпт для перевода',
+          promptIntro: 'Скопируйте в ChatGPT:',
+          prompt: 'Переведи это сообщение для клиента на [язык]. Сохрани вежливый деловой тон, не добавляй новых условий, цен или обещаний. Если в тексте есть служебные слова для менеджера - не переводи их как часть сообщения клиенту. Вот текст: [вставить сообщение]',
+          accessTitle: 'Доступ к рабочему ChatGPT',
+          access: 'Доступ запрашивайте в Telegram:',
+          notes: [
+            'Один чат = одна тема.',
+            'Для регулярных задач используйте отдельный проект.',
+            'Для одноразовых задач создавайте новый чат.'
+          ]
+        },
+        en: {
+          title: '⭐ Outside scripts',
+          intro: 'If there is no ready reply: write a short answer yourself, check it against the stop-rules, translate it with ChatGPT if needed, and only then send it to the client.',
+          bullets: [
+            'Do not send passport details, phone numbers, emails, document photos or any other client personal data to ChatGPT.',
+            'Do not upload client documents.',
+            'If there is a debt, online medical/psych documents, Lithuanian code, or a recommendation of another company - get manager approval first.',
+            'Always check ChatGPT answers: the model can make mistakes.'
+          ],
+          promptTitle: 'Translation prompt',
+          promptIntro: 'Copy into ChatGPT:',
+          prompt: 'Translate this client message into [language]. Keep a polite business tone. Do not add new conditions, prices, or promises. If the text contains internal notes for the manager, do not translate them as part of the client message. Text: [paste message]',
+          accessTitle: 'Access to work ChatGPT',
+          access: 'Request access in Telegram:',
+          notes: [
+            'One chat = one topic.',
+            'Use a separate project for regular tasks.',
+            'Create a new chat for one-time tasks.'
+          ]
+        }
+      }[state.uiLang] || {};
+
+      document.querySelector('#custom .rules').innerHTML = `
+        <article class="rule warn">
+          <h3>${escapeHtml(content.title)}</h3>
+          <p>${escapeHtml(content.intro)}</p>
+          <ul>${content.bullets.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </article>
+        <article class="rule good">
+          <h3>${escapeHtml(content.promptTitle)}</h3>
+          <p>${escapeHtml(content.promptIntro)}</p>
+          <div class="mbox">${escapeHtml(content.prompt)}</div>
+        </article>
+        <article class="rule">
+          <h3>${escapeHtml(content.accessTitle)}</h3>
+          <p>${escapeHtml(content.access)} <a href="https://t.me/oleksandra_marketing" target="_blank" rel="noopener">@oleksandra_marketing</a></p>
+          <ul>${content.notes.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </article>
+      `;
+    }
+
+    function setSection(section) {
+      state.section = section;
+      document.querySelectorAll('.section').forEach(item => item.classList.toggle('active', item.id === section));
+      document.getElementById('scriptIntro').style.display = section === 'scripts' ? '' : 'none';
+      document.querySelector('.toolbar').style.display = section === 'scripts' ? 'grid' : 'none';
+      document.getElementById('scriptTools').style.display = section === 'scripts' ? '' : 'none';
+      renderNav();
+      if (section === 'prices') renderPrices();
+      if (section === 'custom') renderCustom();
+    }
+
+    function applyUiLanguage() {
+      uiLang.querySelectorAll('.ui-lang-btn').forEach(item => item.classList.toggle('active', item.dataset.uiLang === state.uiLang));
+      const data = {
+        uk: {
+          brandSub: 'Скрипти для менеджера',
+          sections: 'Розділи',
+          languageBlock: 'Мова',
+          uiLanguage: 'Мова платформи',
+          scriptLanguage: 'Мова скриптів',
+          vars: 'Дані для підстановки',
+          manager: 'Імʼя менеджера',
+          managerPh: 'Наприклад: Анна',
+          phone: 'Офісний телефон',
+          client: 'Імʼя клієнта',
+          clientPh: 'Необовʼязково',
+          h1: 'Готові відповіді для клієнтів',
+          lead: 'Менеджер обирає послугу або ситуацію, швидко знаходить потрібний текст, за потреби підставляє свої дані та копіює повідомлення в месенджер.',
+          ruleTitle: 'Головне правило',
+          ruleText: 'Якщо ситуації немає в скриптах, менеджер пише відповідь самостійно, перевіряє її по правилах і для перекладу на іншу мову використовує ChatGPT.',
+          builderTitle: 'Конструктор',
+          tone: 'Тон',
+          insert: 'Вставити правило для нестандартної ситуації',
+          draftTitle: 'Чернетка відповіді',
+          draftPh: 'Напишіть або відредагуйте відповідь клієнту...',
+          copyDraft: 'Копіювати чернетку',
+          clearDraft: 'Очистити',
+          draftHelp: 'Чернетка потрібна для ситуацій, коли готового скрипта немає або його треба швидко відредагувати під клієнта. Можна перенести сюди будь-який готовий текст кнопкою “Редагувати”, змінити формулювання, перевірити по стоп-правилах і скопіювати вже фінальну відповідь.'
+        },
+        ru: {
+          brandSub: 'Скрипты для менеджера',
+          sections: 'Разделы',
+          languageBlock: 'Язык',
+          uiLanguage: 'Язык платформы',
+          scriptLanguage: 'Язык скриптов',
+          vars: 'Данные для подстановки',
+          manager: 'Имя менеджера',
+          managerPh: 'Например: Анна',
+          phone: 'Офисный телефон',
+          client: 'Имя клиента',
+          clientPh: 'Необязательно',
+          h1: 'Готовые ответы для клиентов',
+          lead: 'Менеджер выбирает услугу или ситуацию, быстро находит нужный текст, подставляет свои данные и копирует сообщение в мессенджер.',
+          ruleTitle: 'Главное правило',
+          ruleText: 'Если ситуации нет в скриптах, менеджер пишет ответ самостоятельно, проверяет его по правилам и для перевода на другой язык использует ChatGPT.',
+          builderTitle: 'Конструктор',
+          tone: 'Тон',
+          insert: 'Вставить правило для нестандартной ситуации',
+          draftTitle: 'Черновик ответа',
+          draftPh: 'Напишите или отредактируйте ответ клиенту...',
+          copyDraft: 'Копировать черновик',
+          clearDraft: 'Очистить',
+          draftHelp: 'Черновик нужен для ситуаций, когда готового скрипта нет или его нужно быстро отредактировать под клиента. Можно перенести сюда любой готовый текст кнопкой “Редактировать”, изменить формулировку, проверить по стоп-правилам и скопировать финальный ответ.'
+        },
+        en: {
+          brandSub: 'Manager scripts',
+          sections: 'Sections',
+          languageBlock: 'Language',
+          uiLanguage: 'Platform language',
+          scriptLanguage: 'Script language',
+          vars: 'Variables',
+          manager: 'Manager name',
+          managerPh: 'Example: Anna',
+          phone: 'Office phone',
+          client: 'Client name',
+          clientPh: 'Optional',
+          h1: 'Ready replies for clients',
+          lead: 'Choose a service or situation, find the right message, insert manager details and copy it to the messenger.',
+          ruleTitle: 'Main rule',
+          ruleText: 'If there is no ready script, write the answer manually, check it against the rules, and use ChatGPT for translation.',
+          builderTitle: 'Builder',
+          tone: 'Tone',
+          insert: 'Insert rule for a non-standard situation',
+          draftTitle: 'Reply draft',
+          draftPh: 'Write or edit the client reply...',
+          copyDraft: 'Copy draft',
+          clearDraft: 'Clear',
+          draftHelp: 'Draft is for cases where there is no ready script or the text needs quick editing for a specific client. Move any ready message here with “Edit”, adjust it, check stop-rules, then copy the final reply.'
+        }
+      }[state.uiLang];
+
+      const toneLabels = {
+        uk: { soft: 'Спокійно і ввічливо', short: 'Коротко', firm: 'Чітко по правилах' },
+        ru: { soft: 'Спокойно и вежливо', short: 'Коротко', firm: 'Четко по правилам' },
+        en: { soft: 'Calm and polite', short: 'Short', firm: 'Clear by rules' }
+      }[state.uiLang] || {};
+
+      document.querySelector('.brand span').textContent = data.brandSub;
+      document.querySelectorAll('.side-label')[0].textContent = data.sections;
+      document.querySelector('[data-ui="languageBlock"]').textContent = data.scriptLanguage;
+      document.querySelector('[data-ui="scriptLanguage"]').textContent = data.scriptLanguage;
+      document.querySelectorAll('.side-label')[2].textContent = data.vars;
+      document.querySelector('label[for="managerName"]').textContent = data.manager;
+      managerName.placeholder = data.managerPh;
+      document.querySelector('label[for="officePhone"]').textContent = data.phone;
+      document.querySelector('label[for="clientName"]').textContent = data.client;
+      clientName.placeholder = data.clientPh;
+      document.querySelector('#scriptIntro h1').textContent = data.h1;
+      document.querySelector('#scriptIntro .lead').textContent = data.lead;
+      document.querySelector('.status-card strong').textContent = data.ruleTitle;
+      document.querySelector('.status-card p').textContent = data.ruleText;
+      document.querySelector('#builder .panel h2').textContent = data.builderTitle;
+      document.querySelector('label[for="toneSelect"]').textContent = data.tone;
+      document.getElementById('insertFallback').textContent = data.insert;
+      document.querySelectorAll('#builder .panel h2')[1].textContent = data.draftTitle;
+      document.getElementById('draft').placeholder = data.draftPh;
+      document.getElementById('copyDraft').textContent = data.copyDraft;
+      document.getElementById('clearDraft').textContent = data.clearDraft;
+      document.getElementById('draftHelp').textContent = data.draftHelp;
+      document.querySelector('#toneSelect option[value="soft"]').textContent = toneLabels.soft;
+      document.querySelector('#toneSelect option[value="short"]').textContent = toneLabels.short;
+      document.querySelector('#toneSelect option[value="firm"]').textContent = toneLabels.firm;
+      search.placeholder = t('search');
+      renderCustom();
+      if (state.section === 'prices') renderPrices();
+    }
+
+    function saveSettings() {
+      localStorage.setItem('amazonikkDeskSettings', JSON.stringify({
+        managerName: managerName.value,
+        officePhone: officePhone.value,
+        clientName: clientName.value,
+        uiLang: state.uiLang,
+        scriptLang: state.scriptLang
+      }));
+    }
+
+    function loadSettings() {
+      try {
+        const settings = JSON.parse(localStorage.getItem('amazonikkDeskSettings') || '{}');
+        managerName.value = settings.managerName || '';
+        officePhone.value = settings.officePhone || '';
+        clientName.value = settings.clientName || '';
+        state.uiLang = settings.uiLang || 'uk';
+        state.scriptLang = settings.scriptLang || 'uk';
+        scriptLang.value = state.scriptLang;
+        quickLang.value = state.scriptLang;
+      } catch (error) {
+        localStorage.removeItem('amazonikkDeskSettings');
+      }
+    }
+
+    nav.addEventListener('click', event => {
+      const button = event.target.closest('button[data-section]');
+      if (button) setSection(button.dataset.section);
+    });
+
+    cards.addEventListener('click', event => {
+      const copyButton = event.target.closest('button[data-copy]');
+      const editButton = event.target.closest('button[data-edit]');
+      if (copyButton) {
+        const item = templates[Number(copyButton.dataset.copy)];
+        copyText(getScriptText(item), copyButton);
+      }
+      if (editButton) {
+        const item = templates[Number(editButton.dataset.edit)];
+        document.getElementById('draft').value = getScriptText(item);
+        setSection('builder');
+      }
+    });
+
+    serviceFilter.addEventListener('change', () => {
+      state.service = serviceFilter.value;
+      renderCards();
+    });
+
+    typeFilter.addEventListener('change', () => {
+      state.type = typeFilter.value;
+      renderCards();
+    });
+
+    uiLang.addEventListener('click', event => {
+      const button = event.target.closest('button[data-ui-lang]');
+      if (!button) return;
+      state.uiLang = button.dataset.uiLang;
+      uiLang.querySelectorAll('.ui-lang-btn').forEach(item => item.classList.toggle('active', item.dataset.uiLang === state.uiLang));
+      saveSettings();
+      applyUiLanguage();
+      renderNav();
+      renderFilters();
+      renderCards();
+      renderPrices();
+    });
+
+    function setScriptLanguage(value) {
+      state.scriptLang = value;
+      scriptLang.value = value;
+      quickLang.value = value;
+      saveSettings();
+      renderCards();
+    }
+
+    scriptLang.addEventListener('change', () => setScriptLanguage(scriptLang.value));
+    quickLang.addEventListener('change', () => setScriptLanguage(quickLang.value));
+
+    document.getElementById('priceTabs').addEventListener('click', event => {
+      const button = event.target.closest('button[data-price-group]');
+      if (!button) return;
+      state.priceGroup = button.dataset.priceGroup;
+      renderPrices();
+    });
+
+    search.addEventListener('input', () => {
+      state.query = search.value;
+      renderCards();
+    });
+
+    [managerName, officePhone, clientName].forEach(input => {
+      input.addEventListener('input', () => {
+        saveSettings();
+        renderCards();
+      });
+    });
+
+    document.getElementById('copyDraft').addEventListener('click', event => {
+      copyText(document.getElementById('draft').value, event.currentTarget);
+    });
+
+    document.getElementById('clearDraft').addEventListener('click', () => {
+      document.getElementById('draft').value = '';
+    });
+
+    document.getElementById('insertFallback').addEventListener('click', () => {
+      document.getElementById('draft').value = fallbackDraftText(state.scriptLang, document.getElementById('toneSelect').value);
+    });
+
+    function fallbackDraftText(lang, tone) {
+      const texts = {
+        uk: {
+          soft: 'Добрий день! Дякую за уточнення. У вашій ситуації потрібно додатково перевірити деталі, щоб не дати неправильну інформацію.',
+          short: 'Добрий день! Потрібно уточнити деталі по вашій ситуації. Я перевірю інформацію і повернуся з відповіддю.',
+          firm: 'Добрий день! По цій ситуації потрібне погодження з керівником, тому я не буду давати неперевірену відповідь.',
+          body: 'Напишіть, будь ласка, коротко:\n- яка саме послуга вас цікавить;\n- які документи вже є;\n- чи є борг або незакриті платежі;\n- чи потрібен варіант з приїздом або онлайн.\n\nПісля перевірки дам вам точну відповідь.'
+        },
+        ru: {
+          soft: 'Добрый день! Спасибо за уточнение. В вашей ситуации нужно дополнительно проверить детали, чтобы не дать неверную информацию.',
+          short: 'Добрый день! Нужно уточнить детали по вашей ситуации. Я проверю информацию и вернусь с ответом.',
+          firm: 'Добрый день! По этой ситуации нужно согласование с руководителем, поэтому я не буду давать непроверенный ответ.',
+          body: 'Напишите, пожалуйста, коротко:\n- какая именно услуга вас интересует;\n- какие документы уже есть;\n- есть ли долг или незакрытые платежи;\n- нужен вариант с приездом или онлайн.\n\nПосле проверки дам точный ответ.'
+        },
+        en: {
+          soft: 'Good afternoon! Thank you for the details. I need to check your situation first so I do not give you incorrect information.',
+          short: 'Good afternoon! I need to clarify a few details about your situation. I will check the information and get back to you.',
+          firm: 'Good afternoon! This situation needs manager approval, so I will not give an unverified answer.',
+          body: 'Please briefly write:\n- which service you need;\n- which documents you already have;\n- whether there is any unpaid balance;\n- whether you need an in-person or online option.\n\nAfter checking, I will give you an exact answer.'
+        },
+        ar: {
+          soft: 'السلام عليكم! شكراً على التوضيح. في حالتك أحتاج إلى مراجعة التفاصيل أولاً حتى لا أعطيك معلومة غير صحيحة.',
+          short: 'السلام عليكم! أحتاج إلى توضيح بعض التفاصيل بخصوص حالتك. سأراجع المعلومات وأعود إليك بالجواب.',
+          firm: 'السلام عليكم! هذه الحالة تحتاج إلى موافقة المدير، لذلك لن أعطيك جواباً غير مؤكد.',
+          body: 'اكتب من فضلك باختصار:\n- ما هي الخدمة التي تحتاجها؛\n- ما هي الوثائق الموجودة لديك؛\n- هل توجد مبالغ غير مدفوعة؛\n- هل تحتاج الخدمة بالحضور أو أونلاين.\n\nبعد المراجعة سأعطيك جواباً دقيقاً.'
+        },
+        tr: {
+          soft: 'Merhaba! Detaylar için teşekkür ederim. Yanlış bilgi vermemek için durumunuzu önce kontrol etmem gerekiyor.',
+          short: 'Merhaba! Durumunuzla ilgili birkaç detayı netleştirmem gerekiyor. Bilgileri kontrol edip size döneceğim.',
+          firm: 'Merhaba! Bu durum için yönetici onayı gerekiyor, bu yüzden doğrulanmamış cevap vermeyeceğim.',
+          body: 'Lütfen kısaca yazın:\n- hangi hizmete ihtiyacınız var;\n- hangi belgeler sizde var;\n- açık ödeme veya borç var mı;\n- işlem ofiste mi yoksa online mı gerekli.\n\nKontrolden sonra size net cevap vereceğim.'
+        }
+      };
+      const set = texts[lang] || texts.uk;
+      return `${set[tone] || set.soft}\n\n${set.body}`;
+    }
+
+    loadSettings();
+    applyUiLanguage();
+    renderNav();
+    renderFilters();
+    renderCards();
+    renderRules();
+    renderPrices();
+    renderCustom();
+  </script>
+</body>
+</html>
