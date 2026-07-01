@@ -2113,16 +2113,16 @@ Lütfen şunları gönderin:
       if (item.texts?.[lang]) {
         return hydrate(item.texts[lang], canonicalService(item.service), lang);
       }
-      if (['en', 'ar', 'tr'].includes(lang)) {
-        return hydrate(curatedClientText(item, lang), canonicalService(item.service), lang);
-      }
       const base = item.texts?.uk || item.text;
-      const text = lang === 'ru' ? curatedRussianText(item) : base;
+      if (lang === 'uk') return hydrate(base, canonicalService(item.service), lang);
+      const key = scenarioKey(item);
+      const text = scenarioMessages[key]?.[lang] || translateScriptFromUkrainian(base, lang);
       return hydrate(text, canonicalService(item.service), lang);
     }
 
     function getRussianText(item) {
-      const base = item.texts?.ru || curatedRussianText(item);
+      const key = scenarioKey(item);
+      const base = item.texts?.ru || scenarioMessages[key]?.ru || translateScriptFromUkrainian(item.texts?.uk || item.text, 'ru');
       return hydrate(base, canonicalService(item.service), 'ru');
     }
 
@@ -2253,28 +2253,57 @@ Lütfen şunları gönderin:
       return variants[lang][key];
     }
 
-    function curatedRussianText(item) {
-      const key = scenarioKey(item);
-      return scenarioMessages[key]?.ru || fallbackRussian(item);
-    }
-
-    function curatedClientText(item, lang) {
-      const key = scenarioKey(item);
-      return scenarioMessages[key]?.[lang] || fallbackClient(item, lang);
+    function translateScriptFromUkrainian(text, lang) {
+      if (lang === 'ru') return toRussian(text);
+      if (lang === 'en') return toEnglish(text);
+      if (lang === 'ar') return toMoroccan(text);
+      if (lang === 'tr') return toTurkish(text);
+      return text;
     }
 
     function toRussian(text) {
       const pairs = [
+        ['Щоб підібрати правильний варіант Code 95, уточніть, будь ласка:', 'Чтобы подобрать правильный вариант Code 95, уточните, пожалуйста:'],
+        ['Яка у вас категорія прав: C чи D?', 'Какая у вас категория прав: C или D?'],
+        ['Коли була відкрита категорія?', 'Когда была открыта категория?'],
+        ['Чи можете приїхати у Варшаву на півдня?', 'Можете ли вы приехать в Варшаву на полдня?'],
+        ['Які у вас права і громадянство?', 'Какие у вас права и гражданство?'],
+        ['Чи є вже литовський або польський код 95?', 'Есть ли уже литовский или польский Code 95?'],
+        ['Яке у вас громадянство або для якої групи клієнтів рахуємо ціну: UA/RU, Молдова, EN/TR чи Марокко?', 'Какое у вас гражданство или для какой группы клиентов считаем цену: UA/RU, Молдова, EN/TR или Марокко?'],
+        ['Після цього я скажу точний варіант, термін і вартість.', 'После этого я скажу точный вариант, срок и стоимость.'],
+        ['Важливо: для деяких національностей ціна відрізняється, тому перед озвучуванням суми обов\'язково перевіряємо групу клієнта.', 'Важно: для некоторых национальностей цена отличается, поэтому перед озвучиванием суммы обязательно проверяем группу клиента.'],
+        ['Для вас підходить короткий курс Code 95.', 'Для вас подходит короткий курс Code 95.'],
+        ['Є варіант короткого курсу Code 95 без приїзду.', 'Есть вариант короткого курса Code 95 без приезда.'],
+        ['Для вас підходить довгий курс Code 95 з екзаменом.', 'Для вас подходит длинный курс Code 95 с экзаменом.'],
+        ['Є варіант довгого курсу без екзамену через литовський код.', 'Есть вариант длинного курса без экзамена через литовский код.'],
+        ['Є дистанційний варіант довгого курсу Code 95 без приїзду.', 'Есть дистанционный вариант длинного курса Code 95 без приезда.'],
+        ['Умови:', 'Условия:'],
+        ['Документи з собою:', 'Документы с собой:'],
+        ['Вартість:', 'Стоимость:'],
+        ['Формат:', 'Формат:'],
+        ['Перед продажем обов\'язково уточнюємо актуальність і деталі у менеджерів.', 'Перед продажей обязательно уточняем актуальность и детали у менеджеров.'],
+        ['це базова ціна для UA/RU; для Молдови, EN/TR і Марокко перевірте окрему ціну в таблиці', 'это базовая цена для UA/RU; для Молдовы, EN/TR и Марокко проверьте отдельную цену в таблице'],
+        ['це базова онлайн-ціна для UA/RU; для EN/TR і Марокко перевірте окрему ціну в таблиці', 'это базовая онлайн-цена для UA/RU; для EN/TR и Марокко проверьте отдельную цену в таблице'],
+        ['це базова ціна для UA/RU; для EN/TR і Марокко перевірте окрему ціну в таблиці', 'это базовая цена для UA/RU; для EN/TR и Марокко проверьте отдельную цену в таблице'],
+        ['це базова ціна для UA/RU; для Молдови окрема ціна 3900 зл / 965 євро', 'это базовая цена для UA/RU; для Молдовы отдельная цена 3900 зл / 965 евро'],
+        ['це базова онлайн-ціна для UA/RU та EN/TR; для Марокко перевірте окрему ціну в таблиці', 'это базовая онлайн-цена для UA/RU и EN/TR; для Марокко проверьте отдельную цену в таблице'],
         ['Добрий день', 'Добрый день'],
         ['Перепрошую', 'Извините'],
         ['будь ласка', 'пожалуйста'],
+        ['обов\'язково', 'обязательно'],
+        ['обовʼязково', 'обязательно'],
         ['вартість', 'стоимость'],
+        ['Вартість', 'Стоимость'],
         ['термін', 'срок'],
+        ['Термін', 'Срок'],
         ['приблизно', 'примерно'],
         ['потрібно', 'нужно'],
+        ['Потрібно', 'Нужно'],
         ['приїхати', 'приехать'],
+        ['Приїхати', 'Приехать'],
         ['Варшаву', 'Варшаву'],
         ['документи', 'документы'],
+        ['Документи', 'Документы'],
         ['водійське посвідчення', 'водительское удостоверение'],
         ['закордонний паспорт', 'загранпаспорт'],
         ['чип-карта', 'чип-карта'],
@@ -2301,6 +2330,7 @@ Lütfen şunları gönderin:
         ['після', 'после'],
         ['перед', 'перед'],
         ['уточніть', 'уточните'],
+        ['Уточніть', 'Уточните'],
         ['відправляємо', 'отправляем'],
         ['не відправляємо', 'не отправляем'],
         ['робочих днів', 'рабочих дней'],
@@ -2313,15 +2343,170 @@ Lütfen şunları gönderin:
     }
 
     function toEnglish(text) {
-      return `Hello! Please check the details below.\n\n${text}\n\nIf anything is unclear, please send your documents/photos here and we will check your situation.`;
+      const pairs = [
+        ['Щоб підібрати правильний варіант Code 95, уточніть, будь ласка:', 'To choose the correct Code 95 option, please clarify:'],
+        ['Яка у вас категорія прав: C чи D?', 'What licence category do you have: C or D?'],
+        ['Коли була відкрита категорія?', 'When was the category opened?'],
+        ['C до 09.09.2009 або після?', 'C before 09.09.2009 or after?'],
+        ['D до 08.09.2008 або після?', 'D before 08.09.2008 or after?'],
+        ['Чи можете приїхати у Варшаву на півдня?', 'Can you come to Warsaw for half a day?'],
+        ['Які у вас права і громадянство?', 'What driving licence and citizenship do you have?'],
+        ['Чи є вже литовський або польський код 95?', 'Do you already have Lithuanian or Polish Code 95?'],
+        ['Яке у вас громадянство або для якої групи клієнтів рахуємо ціну: UA/RU, Молдова, EN/TR чи Марокко?', 'What is your citizenship, or which client group should we calculate the price for: UA/RU, Moldova, EN/TR or Morocco?'],
+        ['Після цього я скажу точний варіант, термін і вартість.', 'After that, I will tell you the exact option, timing and price.'],
+        ['Важливо: для деяких національностей ціна відрізняється, тому перед озвучуванням суми обов\'язково перевіряємо групу клієнта.', 'Important: for some nationalities the price is different, so before giving the amount we must check the client group.'],
+        ['Для вас підходить короткий курс Code 95.', 'The short Code 95 course is suitable for you.'],
+        ['Є варіант короткого курсу Code 95 без приїзду.', 'There is an option for a short Code 95 course without coming to the office.'],
+        ['Для вас підходить довгий курс Code 95 з екзаменом.', 'The long Code 95 course with an exam is suitable for you.'],
+        ['Є варіант довгого курсу без екзамену через литовський код.', 'There is an option for a long course without an exam through Lithuanian Code 95.'],
+        ['Є дистанційний варіант довгого курсу Code 95 без приїзду.', 'There is a remote option for the long Code 95 course without coming to the office.'],
+        ['Умови:', 'Conditions:'],
+        ['Документи з собою:', 'Documents to bring:'],
+        ['Вартість:', 'Price:'],
+        ['Формат:', 'Format:'],
+        ['це базова ціна для UA/RU; для Молдови, EN/TR і Марокко перевірте окрему ціну в таблиці', 'this is the base price for UA/RU; for Moldova, EN/TR and Morocco, check the separate price in the table'],
+        ['це базова онлайн-ціна для UA/RU; для EN/TR і Марокко перевірте окрему ціну в таблиці', 'this is the base online price for UA/RU; for EN/TR and Morocco, check the separate price in the table'],
+        ['це базова ціна для UA/RU; для EN/TR і Марокко перевірте окрему ціну в таблиці', 'this is the base price for UA/RU; for EN/TR and Morocco, check the separate price in the table'],
+        ['це базова ціна для UA/RU; для Молдови окрема ціна 3900 зл / 965 євро', 'this is the base price for UA/RU; for Moldova the separate price is 3900 PLN / 965 EUR'],
+        ['це базова онлайн-ціна для UA/RU та EN/TR; для Марокко перевірте окрему ціну в таблиці', 'this is the base online price for UA/RU and EN/TR; for Morocco, check the separate price in the table'],
+        ['медкомісія, психотест, документи, навчання, фото і пошта входять у процес', 'medical commission, psychotest, documents, training, photo and postage are included in the process'],
+        ['потрібно приїхати у Варшаву 1 раз на півдня', 'you need to come to Warsaw once for half a day'],
+        ['обов\'язково потрібно знаходитися на території ЄС', 'you must be located in the EU'],
+        ['потрібно надіслати скани документів і відео', 'you need to send document scans and a video'],
+        ['при дистанційному оформленні клієнт отримує тільки карту Code 95', 'with remote processing, the client receives only the Code 95 card'],
+        ['Медосмотр і психотест не відправляємо ні сканом, ні оригіналом', 'We do not send the medical examination or psychotest as scans or originals'],
+        ['Якщо потрібні мед і псих, потрібно приїхати особисто', 'If medical and psychotest documents are needed, the client must come in person'],
+        ['без екзамену', 'without an exam'],
+        ['з екзаменом', 'with an exam'],
+        ['під ключ', 'turnkey'],
+        ['закордонний паспорт', 'passport'],
+        ['водійське посвідчення', 'driving licence'],
+        ['старий код 95', 'old Code 95'],
+        ['віза або карта побиту', 'visa or residence card'],
+        ['якщо потрібна легалізація', 'if legalization is needed'],
+        ['можна зробити у нас', 'can be made with us'],
+        ['фото 3.5 x 4.5', 'photo 3.5 x 4.5'],
+        ['термін', 'timeframe'],
+        ['вартість', 'price'],
+        ['приблизно', 'about'],
+        ['тижнів', 'weeks'],
+        ['робочих днів', 'business days'],
+        ['євро', 'EUR'],
+        ['зл', 'PLN'],
+        ['Польща', 'Poland'],
+        ['Україна', 'Ukraine'],
+        ['Білорусь', 'Belarus'],
+        ['Європа', 'Europe'],
+        ['Італія', 'Italy'],
+        ['Іспанія', 'Spain'],
+        ['Адреса офісу:', 'Office address:'],
+        ['Графік:', 'Working hours:'],
+        ['понеділок-п\'ятниця', 'Monday-Friday']
+      ];
+      return replaceDictionary(text, pairs);
     }
 
     function toMoroccan(text) {
-      return `Salam! Afak qra had l-ma3loumat.\n\n${text}\n\nIla kan chi soual, sifter lina tsawer dyal l-wata2iq hna bach nverifiw l-wad3 dyalek.`;
+      const english = toEnglish(text);
+      const pairs = [
+        ['To choose the correct Code 95 option, please clarify:', 'Salam! Bach nkhtaro lik option s7i7 dyal Code 95, 3afak wde7:'],
+        ['What licence category do you have: C or D?', 'Chno category dyal permis 3andek: C ola D?'],
+        ['When was the category opened?', 'Imta t7ellat had category?'],
+        ['Can you come to Warsaw for half a day?', 'T9der tji l-Warsaw nos nhar?'],
+        ['What driving licence and citizenship do you have?', 'Chno permis w chno jinsia 3andek?'],
+        ['Do you already have Lithuanian or Polish Code 95?', 'Wash 3andek deja Code 95 Lithuanian ola Polish?'],
+        ['After that, I will tell you the exact option, timing and price.', 'Mora hadchi ghadi n9ol lik option s7i7, l-moda w taman.'],
+        ['The short Code 95 course is suitable for you.', 'Short course dyal Code 95 kaynassbek.'],
+        ['Conditions:', 'Shorout:'],
+        ['Documents to bring:', 'Documents li khas tjib:'],
+        ['Price:', 'Taman:'],
+        ['Format:', 'Format:'],
+        ['this is the base price for UA/RU', 'hada taman l-asasi l-UA/RU'],
+        ['check the separate price in the table', 'shouf taman l-khas f tableau'],
+        ['you need to come to Warsaw once for half a day', 'khassek tji l-Warsaw marra wa7da nos nhar'],
+        ['you must be located in the EU', 'khassek tkoun f EU'],
+        ['you need to send document scans and a video', 'khassek tsift scans dyal documents w video'],
+        ['with remote processing, the client receives only the Code 95 card', 'f online process, client kayakhod ghir carte Code 95'],
+        ['We do not send the medical examination or psychotest as scans or originals', 'ma kansiftouch medical test w psychotest la scan la original'],
+        ['passport', 'passport'],
+        ['driving licence', 'permis'],
+        ['old Code 95', 'Code 95 l-9dim'],
+        ['visa or residence card', 'visa ola karta pobytu'],
+        ['photo', 'tswira'],
+        ['about', 'taqriban'],
+        ['weeks', 'simanat'],
+        ['business days', 'working days'],
+        ['Office address:', 'Adresse dyal office:'],
+        ['Working hours:', 'Lwa9t dyal khedma:']
+      ];
+      return replaceDictionary(english, pairs);
     }
 
     function toTurkish(text) {
-      return `Merhaba! Lütfen aşağıdaki bilgileri kontrol edin.\n\n${text}\n\nBir sorunuz varsa belgelerin fotoğraflarını buraya gönderin, durumunuzu kontrol edelim.`;
+      const english = toEnglish(text);
+      const pairs = [
+        ['To choose the correct Code 95 option, please clarify:', 'Doğru Code 95 seçeneğini belirlemek için lütfen netleştirin:'],
+        ['What licence category do you have: C or D?', 'Ehliyet kategoriniz nedir: C mi D mi?'],
+        ['When was the category opened?', 'Kategori ne zaman açıldı?'],
+        ['C before 09.09.2009 or after?', 'C kategorisi 09.09.2009 öncesi mi sonrası mı?'],
+        ['D before 08.09.2008 or after?', 'D kategorisi 08.09.2008 öncesi mi sonrası mı?'],
+        ['Can you come to Warsaw for half a day?', 'Yarım günlüğüne Varşova\'ya gelebilir misiniz?'],
+        ['What driving licence and citizenship do you have?', 'Hangi ehliyetiniz ve vatandaşlığınız var?'],
+        ['Do you already have Lithuanian or Polish Code 95?', 'Litvanya veya Polonya Code 95 belgeniz var mı?'],
+        ['After that, I will tell you the exact option, timing and price.', 'Bundan sonra size doğru seçeneği, süreyi ve fiyatı söyleyeceğim.'],
+        ['Important: for some nationalities the price is different, so before giving the amount we must check the client group.', 'Önemli: bazı vatandaşlıklar için fiyat farklıdır, bu yüzden tutarı söylemeden önce müşteri grubunu kontrol etmeliyiz.'],
+        ['The short Code 95 course is suitable for you.', 'Kısa Code 95 kursu sizin için uygundur.'],
+        ['There is an option for a short Code 95 course without coming to the office.', 'Ofise gelmeden kısa Code 95 kursu seçeneği vardır.'],
+        ['The long Code 95 course with an exam is suitable for you.', 'Sınavlı uzun Code 95 kursu sizin için uygundur.'],
+        ['There is an option for a long course without an exam through Lithuanian Code 95.', 'Litvanya Code 95 üzerinden sınavsız uzun kurs seçeneği vardır.'],
+        ['There is a remote option for the long Code 95 course without coming to the office.', 'Ofise gelmeden uzun Code 95 kursu için uzaktan seçenek vardır.'],
+        ['Conditions:', 'Şartlar:'],
+        ['Documents to bring:', 'Yanınızda getirilecek belgeler:'],
+        ['Price:', 'Fiyat:'],
+        ['Format:', 'Format:'],
+        ['this is the base price for UA/RU; for Moldova, EN/TR and Morocco, check the separate price in the table', 'bu UA/RU için temel fiyattır; Moldova, EN/TR ve Fas için tablodaki ayrı fiyatı kontrol edin'],
+        ['this is the base online price for UA/RU; for EN/TR and Morocco, check the separate price in the table', 'bu UA/RU için temel online fiyattır; EN/TR ve Fas için tablodaki ayrı fiyatı kontrol edin'],
+        ['this is the base price for UA/RU; for EN/TR and Morocco, check the separate price in the table', 'bu UA/RU için temel fiyattır; EN/TR ve Fas için tablodaki ayrı fiyatı kontrol edin'],
+        ['this is the base price for UA/RU; for Moldova the separate price is 3900 PLN / 965 EUR', 'bu UA/RU için temel fiyattır; Moldova için ayrı fiyat 3900 PLN / 965 EUR'],
+        ['this is the base online price for UA/RU and EN/TR; for Morocco, check the separate price in the table', 'bu UA/RU ve EN/TR için temel online fiyattır; Fas için tablodaki ayrı fiyatı kontrol edin'],
+        ['medical commission, psychotest, documents, training, photo and postage are included in the process', 'sağlık komisyonu, psikoteknik test, belgeler, eğitim, fotoğraf ve posta sürece dahildir'],
+        ['you need to come to Warsaw once for half a day', 'Varşova\'ya bir kez yarım günlüğüne gelmeniz gerekir'],
+        ['you must be located in the EU', 'AB bölgesinde bulunmanız gerekir'],
+        ['you need to send document scans and a video', 'belge taramalarını ve video göndermeniz gerekir'],
+        ['with remote processing, the client receives only the Code 95 card', 'uzaktan işlemde müşteri sadece Code 95 kartını alır'],
+        ['We do not send the medical examination or psychotest as scans or originals', 'Sağlık raporu ve psikoteknik testi tarama veya orijinal olarak göndermiyoruz'],
+        ['If medical and psychotest documents are needed, the client must come in person', 'Sağlık ve psikoteknik belgeleri gerekiyorsa müşteri şahsen gelmelidir'],
+        ['without an exam', 'sınavsız'],
+        ['with an exam', 'sınavlı'],
+        ['turnkey', 'anahtar teslim'],
+        ['passport', 'pasaport'],
+        ['driving licence', 'ehliyet'],
+        ['old Code 95', 'eski Code 95'],
+        ['visa or residence card', 'vize veya oturum kartı'],
+        ['if legalization is needed', 'legalizasyon gerekiyorsa'],
+        ['can be made with us', 'bizde yapılabilir'],
+        ['photo 3.5 x 4.5', '3.5 x 4.5 fotoğraf'],
+        ['timeframe', 'süre'],
+        ['price', 'fiyat'],
+        ['about', 'yaklaşık'],
+        ['weeks', 'hafta'],
+        ['business days', 'iş günü'],
+        ['Office address:', 'Ofis adresi:'],
+        ['Working hours:', 'Çalışma saatleri:'],
+        ['Monday-Friday', 'Pazartesi-Cuma']
+      ];
+      return replaceDictionary(english, pairs);
+    }
+
+    function replaceDictionary(text, pairs) {
+      let out = text || '';
+      pairs
+        .slice()
+        .sort((a, b) => b[0].length - a[0].length)
+        .forEach(([from, to]) => {
+          out = out.replaceAll(from, to);
+        });
+      return out;
     }
 
     function escapeHtml(value) {
@@ -2334,9 +2519,16 @@ Lütfen şunları gönderin:
 
     function getVars(service, lang = state.scriptLang) {
       const client = clientName.value.trim();
+      const defaults = {
+        uk: { manager: '[імʼя менеджера]', officePhone: '[офісний номер]' },
+        ru: { manager: '[имя менеджера]', officePhone: '[офисный номер]' },
+        en: { manager: '[manager name]', officePhone: '[office phone]' },
+        ar: { manager: '[اسم المدير]', officePhone: '[رقم المكتب]' },
+        tr: { manager: '[yönetici adı]', officePhone: '[ofis telefonu]' }
+      }[lang] || { manager: '[manager]', officePhone: '[office phone]' };
       return {
-        manager: managerName.value.trim() || '[імʼя менеджера]',
-        officePhone: officePhone.value.trim() || '[офісний номер]',
+        manager: managerName.value.trim() || defaults.manager,
+        officePhone: officePhone.value.trim() || defaults.officePhone,
         client: client ? `, ${client}` : '',
         service: serviceForMessage(service, lang) || '[послуга]'
       };
