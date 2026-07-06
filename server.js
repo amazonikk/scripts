@@ -1040,13 +1040,40 @@ async function answerFromIndex({ index, question, section = null, language, debu
           : [resolvedSection, ...selectRelevantSections(index, queryPlan.hint, Math.max(2, sectionPlanLimit - 1), mode).filter(item => item.id !== resolvedSection.id)])
       : selectRelevantSections(index, queryPlan.hint, sectionPlanLimit, mode);
     const plannedSectionChunks = collectChunksForSections(index, plannedSections);
-    const rankedChunks = rankChunks(queryPlan.hint, plannedSectionChunks, mode);
-    const balancedChunks = balanceChunksBySection(rankedChunks, plannedSections, isCompoundQuestion ? 5 : 4).slice(0, isCompoundQuestion ? 20 : 16);
-    return {
-      ...queryPlan,
-      sections: plannedSections,
-      chunks: balancedChunks
-    };
+     const rankedChunks = rankChunks(queryPlan.hint, plannedSectionChunks, mode);
+     const maxPageScores = new Map();
+     for (const chunk of rankedChunks) {
+       const pageId = chunk.pageId;
+       if (pageId) {
+         const currentMax = maxPageScores.get(pageId) || 0;
+         if (chunk.score > currentMax) {
+           maxPageScores.set(pageId, chunk.score);
+         }
+       }
+     }
+     const boostedChunks = rankedChunks.map(chunk => {
+       const pageId = chunk.pageId;
+       const maxScore = maxPageScores.get(pageId) || 0;
+       let boost = 0;
+       if (maxScore >= 10) {
+         boost = Math.floor(maxScore * 0.5);
+         const cleanText = String(chunk.text || '').trim();
+         const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
+         if (isBullet) {
+           boost += 8;
+         }
+       }
+       return {
+         ...chunk,
+         score: chunk.score + boost
+       };
+     }).sort((a, b) => b.score - a.score);
+     const balancedChunks = balanceChunksBySection(boostedChunks, plannedSections, isCompoundQuestion ? 18 : 15).slice(0, isCompoundQuestion ? 120 : 100);
+     return {
+       ...queryPlan,
+       sections: plannedSections,
+       chunks: balancedChunks
+     };
   });
 
   const sectionMap = new Map();
@@ -1080,19 +1107,47 @@ async function answerFromIndex({ index, question, section = null, language, debu
     }
   }
 
-  const rankedAll = Array.from(combinedRankMap.values())
+  const baseRanked = Array.from(combinedRankMap.values())
     .map(chunk => ({
       ...chunk,
       score: chunk.score + Math.min(6, Math.max(0, chunk.queryHits - 1) * 2)
-    }))
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      const aText = `${a.pageTitle || ''} ${a.path || ''}`.toLowerCase();
-      const bText = `${b.pageTitle || ''} ${b.path || ''}`.toLowerCase();
-      return aText.localeCompare(bText, 'uk');
-    });
+    }));
 
-  let ranked = balanceChunksBySection(rankedAll, selectedSections, isCompoundQuestion ? 7 : 6).slice(0, isCompoundQuestion ? 72 : 60);
+  const maxPageScores = new Map();
+  for (const chunk of baseRanked) {
+    const pageId = chunk.pageId;
+    if (pageId) {
+      const currentMax = maxPageScores.get(pageId) || 0;
+      if (chunk.score > currentMax) {
+        maxPageScores.set(pageId, chunk.score);
+      }
+    }
+  }
+
+  const rankedAll = baseRanked.map(chunk => {
+    const pageId = chunk.pageId;
+    const maxScore = maxPageScores.get(pageId) || 0;
+    let boost = 0;
+    if (maxScore >= 10) {
+      boost = Math.floor(maxScore * 0.5);
+      const cleanText = String(chunk.text || '').trim();
+      const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
+      if (isBullet) {
+        boost += 8;
+      }
+    }
+    return {
+      ...chunk,
+      score: chunk.score + boost
+    };
+  }).sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const aText = `${a.pageTitle || ''} ${a.path || ''}`.toLowerCase();
+    const bText = `${b.pageTitle || ''} ${b.path || ''}`.toLowerCase();
+    return aText.localeCompare(bText, 'uk');
+  });
+
+  let ranked = balanceChunksBySection(rankedAll, selectedSections, isCompoundQuestion ? 18 : 15).slice(0, isCompoundQuestion ? 80 : 60);
   const contextPool = dedupeChunks(ranked);
   let matchedSection = resolvedSection || selectedSections[0] || null;
 
@@ -1109,22 +1164,51 @@ async function answerFromIndex({ index, question, section = null, language, debu
         fallbackRankMap.set(key, current);
       }
     }
-    const fallbackRankedAll = Array.from(fallbackRankMap.values())
+    const baseFallbackRanked = Array.from(fallbackRankMap.values())
       .map(chunk => ({
         ...chunk,
         score: chunk.score + Math.min(6, Math.max(0, chunk.queryHits - 1) * 2)
-      }))
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        const aText = `${a.pageTitle || ''} ${a.path || ''}`.toLowerCase();
-        const bText = `${b.pageTitle || ''} ${b.path || ''}`.toLowerCase();
-        return aText.localeCompare(bText, 'uk');
+      }));
+
+    const maxFallbackPageScores = new Map();
+    for (const chunk of baseFallbackRanked) {
+      const pageId = chunk.pageId;
+      if (pageId) {
+        const currentMax = maxFallbackPageScores.get(pageId) || 0;
+        if (chunk.score > currentMax) {
+          maxFallbackPageScores.set(pageId, chunk.score);
+        }
+      }
+    }
+
+    const fallbackRankedAll = baseFallbackRanked.map(chunk => {
+      const pageId = chunk.pageId;
+      const maxScore = maxFallbackPageScores.get(pageId) || 0;
+      let boost = 0;
+      if (maxScore >= 10) {
+        boost = Math.floor(maxScore * 0.5);
+        const cleanText = String(chunk.text || '').trim();
+        const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
+        if (isBullet) {
+          boost += 8;
+        }
+      }
+      return {
+        ...chunk,
+        score: chunk.score + boost
+      };
+    }).sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const aText = `${a.pageTitle || ''} ${a.path || ''}`.toLowerCase();
+      const bText = `${b.pageTitle || ''} ${b.path || ''}`.toLowerCase();
+      return aText.localeCompare(bText, 'uk');
     });
-    ranked = balanceChunksBySection(fallbackRankedAll, selectedSections, isCompoundQuestion ? 7 : 6).slice(0, isCompoundQuestion ? 72 : 60);
+
+    ranked = balanceChunksBySection(fallbackRankedAll, selectedSections, isCompoundQuestion ? 18 : 15).slice(0, isCompoundQuestion ? 80 : 60);
     contextPool.splice(0, contextPool.length, ...dedupeChunks(ranked));
   }
 
-  const contextChunks = buildContextChunks(contextPool.length ? contextPool : (ranked.length ? ranked : sectionChunks), isCompoundQuestion ? 24 : 18, isCompoundQuestion ? 24000 : 18000);
+  const contextChunks = buildContextChunks(contextPool.length ? contextPool : (ranked.length ? ranked : sectionChunks), isCompoundQuestion ? 60 : 50, isCompoundQuestion ? 60000 : 50000);
   const sourceChunks = dedupeSources(contextChunks);
 
   if (!contextChunks.length) {
@@ -2001,7 +2085,7 @@ function extractAudienceQualifier(question) {
   return match?.[1] || '';
 }
 
-function buildContextChunks(chunks, maxChunks = 18, maxChars = 18000) {
+function buildContextChunks(chunks, maxChunks = 36, maxChars = 36000) {
   const selected = [];
   const pageCounts = new Map();
   let chars = 0;
@@ -2012,7 +2096,7 @@ function buildContextChunks(chunks, maxChunks = 18, maxChars = 18000) {
     if (!snippet) continue;
 
     const pageCount = pageCounts.get(chunk.pageId) || 0;
-    if (pageCount >= 5) continue;
+    if (pageCount >= 15) continue;
 
     const nextChars = chars + snippet.length;
     if (selected.length >= maxChunks || nextChars > maxChars) continue;
@@ -2058,15 +2142,29 @@ function tokenize(value) {
     'and', 'the', 'for', 'with', 'that', 'this', 'from', 'what', 'when', 'where',
     'как', 'что', 'это', 'или', 'для', 'если', 'при', 'you', 'your', 'та', 'це', 'для', 'якщо', 'при', 'або', 'під', 'над'
   ]);
-  return normalize(value)
+  const baseTokens = normalize(value)
     .split(/[^a-zа-яёіїєґ0-9]+/i)
     .map(token => stemToken(token.trim()))
     .filter(token => token.length > 2 && !stopWords.has(token));
+
+  const expanded = [];
+  for (const token of baseTokens) {
+    expanded.push(token);
+    if (token === 'code' || token === 'код') {
+      expanded.push(token === 'code' ? 'код' : 'code');
+    } else if (token === 'chip' || token === 'чип' || token === 'чіп') {
+      expanded.push(...['chip', 'чип', 'чіп'].filter(t => t !== token));
+    } else if (token === 'card' || token === 'карт' || token === 'картк') {
+      expanded.push(...['card', 'карт', 'картк'].filter(t => t !== token));
+    }
+  }
+  return expanded;
 }
 
 function normalize(value) {
   return String(value || '')
     .toLowerCase()
+    .replace(/ё/g, 'е')
     .replace(/\s+/g, ' ')
     .trim();
 }
