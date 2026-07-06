@@ -14,8 +14,8 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const BOOTED_AT = new Date().toISOString();
 const DEFAULT_LANGUAGE = 'ua';
 const FALLBACK_ANSWERS = {
-  ua: 'РЈ РІРёР±СЂР°РЅРѕРјСѓ СЂРѕР·РґС–Р»С– Р±Р°Р·Рё Р·РЅР°РЅСЊ РЅРµРјР°С” С–РЅС„РѕСЂРјР°С†С–С— РґР»СЏ С‚РѕС‡РЅРѕС— РІС–РґРїРѕРІС–РґС–.',
-  ru: 'Р’ РІС‹Р±СЂР°РЅРЅРѕРј СЂР°Р·РґРµР»Рµ Р±Р°Р·С‹ Р·РЅР°РЅРёР№ РЅРµС‚ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ С‚РѕС‡РЅРѕРіРѕ РѕС‚РІРµС‚Р°.',
+  ua: 'У вибраному розділі бази знань немає інформації для точної відповіді.',
+  ru: 'В выбранном разделе базы знаний нет информации для точного ответа.',
   en: 'There is no information in the selected knowledge base section for an accurate answer.'
 };
 
@@ -270,9 +270,9 @@ function selectRelevantSections(index, question, limit = 5, mode = 'fact') {
     }
   }
 
-  const chunkScores = mode === 'client_reply' ? rankChunks(question, index.chunks, mode).slice(0, 80) : [];
+  const chunkScores = rankChunks(question, index.chunks, mode).slice(0, 80);
   for (const chunk of chunkScores) {
-    const section = index.sections.find(item => item.id === chunk.sectionId);
+    const section = index.sections.find(item => item.id === chunk.pageId) || index.sections.find(item => item.id === chunk.sectionId);
     if (!section) continue;
     const current = sectionScores.get(section.id);
     if (!current && chunk.score < 8) continue;
@@ -997,9 +997,23 @@ function splitText(text, maxChars = 900, overlap = 120) {
   while (start < clean.length) {
     let end = Math.min(start + maxChars, clean.length);
     if (end < clean.length) {
-      const breakPoint = clean.lastIndexOf(' ', end);
-      if (breakPoint > start + Math.floor(maxChars * 0.6)) {
-        end = breakPoint;
+      const minSearchStart = start + Math.floor(maxChars * 0.5);
+      let sentenceEnd = -1;
+      for (let i = end - 1; i >= minSearchStart; i--) {
+        const char = clean[i];
+        const nextChar = clean[i + 1];
+        if ((char === '.' || char === '?' || char === '!') && nextChar === ' ') {
+          sentenceEnd = i + 1;
+          break;
+        }
+      }
+      if (sentenceEnd !== -1) {
+        end = sentenceEnd;
+      } else {
+        const breakPoint = clean.lastIndexOf(' ', end);
+        if (breakPoint > start + Math.floor(maxChars * 0.6)) {
+          end = breakPoint;
+        }
       }
     }
 
@@ -1347,10 +1361,10 @@ function buildRetrievalQuestion(question, mode) {
   if (mode !== 'client_reply') return question;
   return [
     question,
-    'С€Р°Р±Р»РѕРЅ СЃРѕРѕР±С‰РµРЅРёСЏ',
-    'РѕС‚РІРµС‚ РєР»РёРµРЅС‚Сѓ',
-    'РіРѕС‚РѕРІС‹Р№ РѕС‚РІРµС‚',
-    'РїРѕСЃР»Рµ Р·РІРѕРЅРєР°',
+    'шаблон сообщения',
+    'ответ клиенту',
+    'готовый ответ',
+    'после звонка',
     'ready-made reply',
     'client message'
   ].join(' ');
@@ -1833,13 +1847,13 @@ function buildRetrievalHint(question, mode, language) {
 }
 
 function getRetrievalSectionLimit(question, language, mode) {
-  if (mode === 'client_reply') return 5;
+  if (mode === 'client_reply') return 8;
 
   const matchedGroups = detectRetrievalIntents(question, language, mode).length;
 
-  if (matchedGroups >= 2) return 12;
-  if (matchedGroups === 1) return 8;
-  return 5;
+  if (matchedGroups >= 2) return 14;
+  if (matchedGroups === 1) return 12;
+  return 10;
 }
 
 function selectTopicChunks(chunks, question, language, maxPerTopic = 4) {
@@ -1905,12 +1919,13 @@ function balanceChunksBySection(chunks, selectedSections, perSectionLimit = 6) {
 
   for (const chunk of chunks) {
     const chunkPath = String(chunk.path || '').trim();
-    const matchesSection = selectedSectionIds.has(chunk.sectionId);
+    const matchesSection = selectedSectionIds.has(chunk.pageId) || selectedSectionIds.has(chunk.sectionId);
     const matchesPath = selectedPaths.some(path => chunkPath === path || chunkPath.startsWith(`${path} /`));
     if (!matchesSection && !matchesPath) continue;
-    const count = counts.get(chunk.sectionId) || 0;
+    const keyId = chunk.pageId || chunk.sectionId;
+    const count = counts.get(keyId) || 0;
     if (count >= perSectionLimit) continue;
-    counts.set(chunk.sectionId, count + 1);
+    counts.set(keyId, count + 1);
     balanced.push(chunk);
   }
 
@@ -1942,27 +1957,11 @@ function getCrossLanguageRetrievalTerms(language) {
       'instruction', 'instructions', 'how to', 'what to do',
       'what to reply', 'what should we reply', 'reply to the client', 'ready-made reply'
     ],
-    ru: [
-      'documents', 'required documents', 'price', 'cost', 'fee',
-      'address', 'location', 'office', 'contacts',
-      'deadline', 'deadlines', 'processing time',
-      'conditions', 'requirements',
-      'remote', 'online', 'without travel', 'without visit', 'no travel', 'no visit',
-      'instruction', 'instructions', 'how to', 'what to do',
-      'what to reply', 'ready-made reply'
-    ],
-    ua: [
-      'documents', 'required documents', 'price', 'cost', 'fee',
-      'address', 'location', 'office', 'contacts',
-      'deadline', 'deadlines', 'processing time',
-      'conditions', 'requirements',
-      'remote', 'online', 'without travel', 'without visit', 'no travel', 'no visit',
-      'instruction', 'instructions', 'how to', 'what to do',
-      'what to reply', 'ready-made reply'
-    ]
+    ru: [],
+    ua: []
   };
 
-  return base[selectedLanguage] || base[DEFAULT_LANGUAGE] || [];
+  return base[selectedLanguage] || [];
 }
 
 function getSafeClientReply(language) {
@@ -1988,8 +1987,8 @@ function augmentAnswerWithQualifierNote({ question, answer, sources, language, m
   if (sourceText.includes(normalizedQualifier)) return answer;
 
   const note = {
-    ua: `РЈ Р±Р°Р·С– Р·РЅР°РЅСЊ РЅРµРјР°С” РѕРєСЂРµРјРѕРіРѕ РїСЂР°РІРёР»Р° РґР»СЏ РєР»С–С”РЅС‚С–РІ ${qualifier}.`,
-    ru: `Р’ Р±Р°Р·Рµ Р·РЅР°РЅРёР№ РЅРµС‚ РѕС‚РґРµР»СЊРЅРѕРіРѕ РїСЂР°РІРёР»Р° РґР»СЏ РєР»РёРµРЅС‚РѕРІ ${qualifier}.`,
+    ua: `У базі знань немає окремого правила для клієнтів ${qualifier}.`,
+    ru: `В базе знаний нет отдельного правила для клиентов ${qualifier}.`,
     en: `The knowledge base does not state a separate rule for ${qualifier} clients.`
   }[normalizeLanguage(language)] || `The knowledge base does not state a separate rule for ${qualifier} clients.`;
 
@@ -1998,7 +1997,7 @@ function augmentAnswerWithQualifierNote({ question, answer, sources, language, m
 
 function extractAudienceQualifier(question) {
   const text = String(question || '');
-  const match = text.match(/\b(?:for|for the|РґР»СЏ)\s+([A-Za-z][A-Za-z'\-]{2,})\s+(?:clients?|client|customers?|customers|РєР»РёРµРЅС‚[Р°-СЏС–С—С”Т‘]*|РєР»С–С”РЅС‚[Р°-СЏС–С—С”Т‘]*)/i);
+  const match = text.match(/\b(?:for|for the|для)\s+([a-zа-яёіїєґ'][a-zа-яёіїєґ'\-]{2,})\s+(?:clients?|client|customers?|customers|клиент[а-яёіїєґ]*|клієнт[а-яёіїєґ]*)/i);
   return match?.[1] || '';
 }
 
@@ -2057,10 +2056,10 @@ function scoreTextOverlap(text, tokens) {
 function tokenize(value) {
   const stopWords = new Set([
     'and', 'the', 'for', 'with', 'that', 'this', 'from', 'what', 'when', 'where',
-    'РєР°Рє', 'С‡С‚Рѕ', 'СЌС‚Рѕ', 'РёР»Рё', 'РґР»СЏ', 'РµСЃР»Рё', 'РїСЂРё', 'the', 'and', 'you', 'your'
+    'как', 'что', 'это', 'или', 'для', 'если', 'при', 'you', 'your', 'та', 'це', 'для', 'якщо', 'при', 'або', 'під', 'над'
   ]);
   return normalize(value)
-    .split(/[^a-zР°-СЏС–С—С”С‘0-9]+/i)
+    .split(/[^a-zа-яёіїєґ0-9]+/i)
     .map(token => stemToken(token.trim()))
     .filter(token => token.length > 2 && !stopWords.has(token));
 }
@@ -2084,18 +2083,42 @@ function normalizeIntentText(value) {
 function stemToken(value) {
   let token = normalize(value);
   if (!token) return '';
-  const endings = [
-    'РёСЏРјРё', 'СЏРјРё', 'Р°РјРё', 'РѕРіРѕ', 'РµРјСѓ', 'РѕРјСѓ', 'РёРјРё', 'С‹РјРё',
-    'РµРµ', 'РёРµ', 'С‹Рµ', 'РѕР№', 'РµР№', 'РёР№', 'С‹Р№', 'Р°СЏ', 'СЏСЏ', 'РѕРµ',
-    'СѓСЋ', 'СЋСЋ', 'РѕРј', 'РµРј', 'Р°Рј', 'СЏРј', 'Р°С…', 'СЏС…', 'РѕРІ', 'РµРІ',
-    'Р°', 'СЏ', 'С‹', 'Рё', 'Сѓ', 'СЋ', 'Рµ', 'Рѕ', 'С‚СЊ', 'С‚Рё', 'РёР»', 'РёР»Р°', 'РёР»Рѕ', 'РёР»Рё'
+
+  const reflexive = ['ся', 'сь'];
+  const verbEndings = [
+    'уть', 'ють', 'ить', 'ять', 'ешь', 'ет', 'ем', 'ете', 'ут', 'ют',
+    'ишь', 'ит', 'им', 'ите', 'ат', 'ят', 'емо', 'имо', 'ть', 'ти',
+    'вши', 'в', 'ла', 'ло', 'ли', 'л', 'мо'
   ];
-  for (const ending of endings) {
-    if (token.length > 4 && token.endsWith(ending)) {
-      token = token.slice(0, -ending.length);
-      break;
+  const adjectiveEndings = [
+    'ными', 'ними', 'ому', 'ему', 'ыми', 'ими', 'ое', 'ее', 'ая', 'яя',
+    'ые', 'ие', 'ый', 'ий', 'ій', 'ой', 'ей', 'ым', 'им', 'ім', 'ов',
+    'ев', 'ів', 'ую', 'юю', 'ых', 'их', 'ах', 'ях'
+  ];
+  const nounEndings = [
+    'иями', 'ям', 'ами', 'ого', 'ему', 'ому', 'ими', 'ыми',
+    'ом', 'ем', 'ам', 'ям', 'ах', 'ях', 'ов', 'ев', 'ей', 'ий',
+    'ою', 'ею', 'а', 'я', 'ы', 'и', 'і', 'и', 'у', 'ю', 'е', 'о', 'ь'
+  ];
+
+  const strip = (word, suffixes) => {
+    for (const suffix of suffixes) {
+      if (word.length - suffix.length > 3 && word.endsWith(suffix)) {
+        return word.slice(0, -suffix.length);
+      }
     }
-  }
+    return word;
+  };
+
+  let prev;
+  do {
+    prev = token;
+    token = strip(token, reflexive);
+    token = strip(token, adjectiveEndings);
+    token = strip(token, verbEndings);
+    token = strip(token, nounEndings);
+  } while (token !== prev);
+
   return token;
 }
 
@@ -2152,8 +2175,8 @@ async function generateGeminiAnswer({ question, context, language, fallback }) {
   const selectedLanguage = normalizeLanguage(language);
   const localizedFallback = fallback || getFallbackAnswer(selectedLanguage);
   const languageInstruction = {
-    ua: 'Р’С–РґРїРѕРІС–РґР°Р№ Р»РёС€Рµ СѓРєСЂР°С—РЅСЃСЊРєРѕСЋ РјРѕРІРѕСЋ.',
-    ru: 'РћС‚РІРµС‡Р°Р№ С‚РѕР»СЊРєРѕ РЅР° СЂСѓСЃСЃРєРѕРј СЏР·С‹РєРµ.',
+    ua: 'Відповідай лише українською мовою.',
+    ru: 'Отвечай только на русском языке.',
     en: 'Answer only in English.'
   }[selectedLanguage];
   const systemInstruction = [
