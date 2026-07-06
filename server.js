@@ -270,12 +270,12 @@ function selectRelevantSections(index, question, limit = 5, mode = 'fact') {
     }
   }
 
-  const chunkScores = rankChunks(question, index.chunks, mode).slice(0, 80);
+  const chunkScores = rankChunks(question, index.chunks, mode).slice(0, 250);
   for (const chunk of chunkScores) {
     const section = index.sections.find(item => item.id === chunk.pageId) || index.sections.find(item => item.id === chunk.sectionId);
     if (!section) continue;
     const current = sectionScores.get(section.id);
-    if (!current && chunk.score < 8) continue;
+    if (!current && chunk.score < 4) continue;
     const next = current || { ...section, score: 0 };
     next.score += Math.max(chunk.score, 1);
     sectionScores.set(section.id, next);
@@ -1056,7 +1056,7 @@ async function answerFromIndex({ index, question, section = null, language, debu
        const maxScore = maxPageScores.get(pageId) || 0;
        let boost = 0;
        if (maxScore >= 10) {
-         boost = Math.floor(maxScore * 0.5);
+         boost = maxScore;
          const cleanText = String(chunk.text || '').trim();
          const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
          if (isBullet) {
@@ -1129,7 +1129,7 @@ async function answerFromIndex({ index, question, section = null, language, debu
     const maxScore = maxPageScores.get(pageId) || 0;
     let boost = 0;
     if (maxScore >= 10) {
-      boost = Math.floor(maxScore * 0.5);
+      boost = maxScore;
       const cleanText = String(chunk.text || '').trim();
       const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
       if (isBullet) {
@@ -1186,7 +1186,7 @@ async function answerFromIndex({ index, question, section = null, language, debu
       const maxScore = maxFallbackPageScores.get(pageId) || 0;
       let boost = 0;
       if (maxScore >= 10) {
-        boost = Math.floor(maxScore * 0.5);
+        boost = maxScore;
         const cleanText = String(chunk.text || '').trim();
         const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
         if (isBullet) {
