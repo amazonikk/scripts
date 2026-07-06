@@ -1,4 +1,4 @@
-
+﻿
 <!doctype html>
 <html lang="uk">
 <head>
@@ -525,6 +525,17 @@
       white-space: pre-wrap;
     }
 
+    .answer-text {
+      color: var(--ink);
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .answer-meta {
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
     .source-list {
       display: grid;
       gap: 10px;
@@ -786,15 +797,15 @@
         <div class="knowledge-panel">
           <div class="knowledge-head">
             <div>
-              <h2 id="knowledgeTitle">Питання до бази знань</h2>
-              <p id="knowledgeLead">Напишіть питання, а система знайде відповідь у скриптах, стоп-правилах і цінах.</p>
+              <h2 id="knowledgeTitle">Поставити питання</h2>
+              <p id="knowledgeLead">Напишіть питання, а AI сам визначить тему в базі знань і відповість тільки з Notion.</p>
             </div>
           </div>
           <div class="knowledge-form">
             <label class="mini-label" for="knowledgeQuestion" id="knowledgeQuestionLabel">Питання менеджера</label>
-            <textarea id="knowledgeQuestion" placeholder="Наприклад: клієнт має борг і просить литовський код, що відповісти?"></textarea>
+            <textarea id="knowledgeQuestion" placeholder="Наприклад: WhatsApp, заміна прав, оплати"></textarea>
             <div class="card-actions">
-              <button class="btn primary" id="knowledgeAsk">Знайти відповідь</button>
+              <button class="btn primary" id="knowledgeAsk">Задати питання</button>
               <button class="btn" id="knowledgeClear">Очистити</button>
             </div>
           </div>
@@ -2559,57 +2570,54 @@ Lütfen şunları gönderin:
       return {
         uk: {
           nav: ['Питання', 'база знань'],
-          title: 'Питання до бази знань',
-          lead: 'Напишіть питання, а система знайде відповідь у базі послуг, правил, цін і процесів.',
+          title: 'Поставити питання',
+          lead: 'Напишіть питання, а AI сам визначить тему в базі знань і відповість тільки з Notion.',
           label: 'Питання менеджера',
-          placeholder: 'Наприклад: клієнт має борг і просить литовський код, що відповісти?',
-          ask: 'Знайти відповідь',
+          placeholder: 'Наприклад: WhatsApp, заміна прав, оплати',
+          ask: 'Задати питання',
           clear: 'Очистити',
-          empty: 'Напишіть питання, щоб я знайшла інформацію в базі знань.',
-          noResults: 'Я не знайшла точного збігу в базі. Перевірте формулювання або скористайтесь вкладкою “Ситуація поза скриптами”.',
-          answerTitle: 'Що відповісти клієнту',
-          sourcesTitle: 'Фрагменти з бази знань',
-          basedOn: 'Відповідь на основі внутрішньої бази знань:',
-          warning: 'Перед відправкою клієнту перевірте відповідь по стоп-правилах.',
+          empty: 'Напишіть питання, щоб AI знайшов тему в базі знань.',
+          detectedTopic: 'Визначена тема',
+          answerTitle: 'Відповідь AI',
+          sourcesTitle: 'Джерела з Notion',
           sourceKnowledge: 'База знань',
-          loading: 'AI аналізує питання і шукає відповідь у базі знань...',
-          aiUnavailable: 'AI-сервер не підключений або не налаштований. Запустіть server.py і додайте GEMINI_API_KEY на сервері.'
+          loading: 'AI шукає тему і відповідь у базі знань...',
+          aiUnavailable: 'AI-сервер не підключений або не налаштований. Запустіть server.js і додайте GEMINI_API_KEY на сервері.',
+          noAnswer: 'У вибраному розділі бази знань немає інформації для точної відповіді.'
         },
         ru: {
           nav: ['Вопрос', 'база знаний'],
-          title: 'Вопрос к базе знаний',
-          lead: 'Напишите вопрос, а система найдет ответ в базе услуг, правил, цен и процессов.',
+          title: 'Задать вопрос',
+          lead: 'Напишите вопрос, а AI сам определит тему в базе знаний и ответит только по Notion.',
           label: 'Вопрос менеджера',
-          placeholder: 'Например: у клиента долг и он просит литовский код, что ответить?',
-          ask: 'Найти ответ',
+          placeholder: 'Например: WhatsApp, замена прав, оплаты',
+          ask: 'Задать вопрос',
           clear: 'Очистить',
-          empty: 'Напишите вопрос, чтобы я нашла информацию в базе знаний.',
-          noResults: 'Я не нашла точного совпадения в базе. Проверьте формулировку или используйте вкладку “Ситуация вне скриптов”.',
-          answerTitle: 'Что ответить клиенту',
-          sourcesTitle: 'Фрагменты из базы знаний',
-          basedOn: 'Ответ на основе внутренней базы знаний:',
-          warning: 'Перед отправкой клиенту проверьте ответ по стоп-правилам.',
+          empty: 'Напишите вопрос, чтобы AI нашёл тему в базе знаний.',
+          detectedTopic: 'Определённая тема',
+          answerTitle: 'Ответ AI',
+          sourcesTitle: 'Источники из Notion',
           sourceKnowledge: 'База знаний',
-          loading: 'AI анализирует вопрос и ищет ответ в базе знаний...',
-          aiUnavailable: 'AI-сервер не подключен или не настроен. Запустите server.py и добавьте GEMINI_API_KEY на сервере.'
+          loading: 'AI ищет тему и ответ в базе знаний...',
+          aiUnavailable: 'AI-сервер не подключен или не настроен. Запустите server.js и добавьте GEMINI_API_KEY на сервере.',
+          noAnswer: 'В выбранном разделе базы знаний нет информации для точного ответа.'
         },
         en: {
           nav: ['Ask', 'knowledge'],
-          title: 'Ask the knowledge base',
-          lead: 'Write a question and the system will search the internal service, rules, price and process knowledge base.',
+          title: 'Ask a question',
+          lead: 'Write a question and AI will detect the topic in the knowledge base and answer only from Notion.',
           label: 'Manager question',
-          placeholder: 'Example: the client has a debt and asks for the Lithuanian code. What should we answer?',
-          ask: 'Find answer',
+          placeholder: 'Example: WhatsApp, driver license change, payments',
+          ask: 'Ask question',
           clear: 'Clear',
-          empty: 'Write a question so I can search the knowledge base.',
-          noResults: 'I did not find a strong match. Try rephrasing or use the Outside scripts tab.',
-          answerTitle: 'Client-ready answer',
-          sourcesTitle: 'Knowledge base fragments',
-          basedOn: 'Answer based on the internal knowledge base:',
-          warning: 'Before sending to the client, check the answer against the stop-rules.',
+          empty: 'Write a question so AI can find the topic in the knowledge base.',
+          detectedTopic: 'Detected topic',
+          answerTitle: 'AI answer',
+          sourcesTitle: 'Notion sources',
           sourceKnowledge: 'Knowledge base',
-          loading: 'AI is analyzing the question and searching the knowledge base...',
-          aiUnavailable: 'AI server is not connected or configured. Run server.py and add GEMINI_API_KEY on the server.'
+          loading: 'AI is finding the topic and answer in the knowledge base...',
+          aiUnavailable: 'AI server is not connected or configured. Run server.js and add GEMINI_API_KEY on the server.',
+          noAnswer: 'There is no information in the selected knowledge base section for an accurate answer.'
         }
       }[state.uiLang];
     }
@@ -2733,135 +2741,70 @@ Lütfen şunları gönderin:
         knowledgeAnswer.innerHTML = `<div class="answer-card"><p>${escapeHtml(data.empty)}</p></div>`;
         return;
       }
-      const results = findKnowledgeMatches(query).slice(0, 5);
       knowledgeAsk.disabled = true;
       knowledgeAsk.textContent = data.loading;
       knowledgeAnswer.innerHTML = `<div class="answer-card"><p>${escapeHtml(data.loading)}</p></div>`;
       try {
-        const aiAnswer = await askAiBackend(query, results);
-        if (aiAnswer) {
-          renderKnowledgeAnswer(aiAnswer, results);
+        const payload = await askAiBackend(query);
+        if (!payload) {
           return;
         }
-        if (!results.length) {
-          knowledgeAnswer.innerHTML = `<div class="answer-card"><p>${escapeHtml(data.aiUnavailable)}</p></div>`;
-          return;
-        }
-        const answer = composeKnowledgeAnswer(query, results, data);
-        renderKnowledgeAnswer(answer, results);
+        renderKnowledgeAnswer(payload);
       } finally {
         knowledgeAsk.disabled = false;
         knowledgeAsk.textContent = data.ask;
       }
     }
 
-    function renderKnowledgeAnswer(answer, results) {
+    function renderKnowledgeAnswer(payload) {
       const data = knowledgeUi();
+      const sources = Array.isArray(payload?.sources) ? payload.sources : [];
+      const answer = String(payload?.answer || '').trim() || data.noAnswer;
+      const sectionTitle = String(payload?.sectionTitle || '').trim();
       knowledgeAnswer.innerHTML = `
         <article class="answer-card">
           <h3>${escapeHtml(data.answerTitle)}</h3>
-          <p>${escapeHtml(answer)}</p>
+          ${sectionTitle ? `<p class="answer-meta"><strong>${escapeHtml(data.detectedTopic)}:</strong> ${escapeHtml(sectionTitle)}</p>` : ''}
+          <div class="answer-text">${escapeHtml(answer)}</div>
         </article>
         <article class="answer-card">
           <h3>${escapeHtml(data.sourcesTitle)}</h3>
           <div class="source-list">
-            ${results.map(item => `
+            ${sources.length ? sources.map(item => `
               <div class="source-item">
                 <strong>${escapeHtml(item.title)}</strong>
-                <small>${escapeHtml(item.kindLabel)} · ${escapeHtml(item.meta)}</small>
-                <p>${escapeHtml(item.summary)}</p>
+                <small>${escapeHtml(item.path || item.sectionTitle || '')}</small>
+                <p>${escapeHtml(item.snippet || item.text || '')}</p>
               </div>
-            `).join('')}
+            `).join('') : `<p>${escapeHtml(data.noAnswer)}</p>`}
           </div>
         </article>
       `;
     }
 
-    async function askAiBackend(question, results) {
+    async function askAiBackend(question) {
       if (location.protocol === 'file:') return '';
+      const fallbackMessage = knowledgeUi().aiUnavailable;
       try {
         const response = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question,
-            uiLang: state.uiLang,
-            scriptLang: state.scriptLang,
-            officePhone: officePhone.value.trim(),
-            managerName: managerName.value.trim(),
-            knowledgeBase,
-            topLocalMatches: results.map(item => ({
-              title: item.title,
-              service: item.meta,
-              content: item.summary
-            }))
+            language: state.uiLang,
+            uiLang: state.uiLang
           })
         });
-        if (!response.ok) return '';
-        const data = await response.json();
-        return String(data.answer || '').trim();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const details = data?.details ? ` (${data.details.name || 'Error'}: ${data.details.message || data.error || 'Unknown error'})` : '';
+          throw new Error(`${response.status} ${response.statusText}${details}`.trim());
+        }
+        return data;
       } catch (error) {
-        return '';
+        knowledgeAnswer.innerHTML = `<div class="answer-card"><p>${escapeHtml(error.message || fallbackMessage)}</p></div>`;
+        return null;
       }
-    }
-
-    function composeKnowledgeAnswer(query, results, data) {
-      const direct = scenarioKnowledgeAnswer(query);
-      if (direct) return direct;
-      const top = results[0];
-      return `${data.basedOn}\n\n${top.summary}\n\n${data.warning}`;
-    }
-
-    function scenarioKnowledgeAnswer(query) {
-      const q = normalizeSearch(query);
-      const phone = officePhone.value.trim() || '[офісний номер]';
-      const address = 'Żurawia 22, 00-515 Warszawa, 3 поверх, офіс 311';
-
-      if (hasAny(q, ['забрати', 'забрать', 'приїхати', 'приехать', 'самовивіз', 'самовывоз', 'в офісі', 'в офисе']) &&
-          hasAny(q, ['код 95', 'code 95', 'документ', 'карта', 'готов'])) {
-        return `Доброго дня! Щоб точно перевірити, чи ваш Code 95 уже в офісі, напишіть, будь ласка, на наш офісний номер: ${phone}.
-
-Колеги перевірять статус по вашій заявці та підтвердять, чи можна сьогодні забрати документ.
-
-Якщо документ уже готовий, забрати можна в офісі: ${address}. Графік: пн-пт 8:00-18:00. Якщо вам зручніше забрати поза робочим часом, можемо залишити документ у поштовій скриньці та надіслати код для отримання.`;
-      }
-
-      if (hasAny(q, ['статус', 'готов', 'готово', 'коли буде', 'когда будет', 'процес', 'процесс']) &&
-          hasAny(q, ['документ', 'код 95', 'карта', 'чип', 'права'])) {
-        return `Доброго дня! По статусу вашого документа потрібно перевірити інформацію по заявці.
-
-Напишіть, будь ласка, на наш офісний номер: ${phone}. Колеги перевірять актуальний етап процесу і дадуть точну відповідь, чи документ уже готовий / коли його можна буде забрати або відправити.`;
-      }
-
-      if (hasAny(q, ['борг', 'долг', 'не оплат', 'задолж']) &&
-          hasAny(q, ['литов', 'код', 'документ', 'скан', 'оригинал', 'оригінал'])) {
-        return `Якщо у клієнта є борг, жодні документи не відправляємо: ні скани, ні оригінали, ні литовський код, ні медосмотр/психотест.
-
-Виняток можливий тільки після особистого погодження з Никитою.
-
-Клієнту можна відповісти коротко: "Доброго дня! Документи можемо передати тільки після закриття оплати. Після надходження оплати одразу повернемось до питання передачі/відправки документа."`;
-      }
-
-      if (hasAny(q, ['мед', 'псих', 'медосмотр', 'психотест']) &&
-          hasAny(q, ['онлайн', 'без приїзду', 'без приезда', 'фото', 'скан', 'скинути', 'отправить'])) {
-        return `Якщо Code 95 оформлювався онлайн без приїзду, медосмотр і психотест не відправляємо ні фото, ні сканом, ні оригіналом. Онлайн-клієнт отримує тільки карту Code 95.
-
-Клієнту можна відповісти: "Доброго дня! По онлайн-оформленню клієнт отримує карту Code 95. Якщо вам потрібні медосмотр і психотест окремо, це можливо тільки при особистому приїзді."`;
-      }
-
-      if (hasAny(q, ['карта побыта', 'карта побиту', 'друга компан', 'другие компании', 'порекоменду', 'контакт'])) {
-        return `Самостійно рекомендувати інші компанії або давати контакти не можна.
-
-Клієнту можна відповісти: "Доброго дня! Уточнимо це питання у керівника і повернемось до вас з відповіддю."`;
-      }
-
-      if (hasAny(q, ['доставка', 'відправ', 'отправ', 'почта', 'пошта', 'inpost', 'nova post'])) {
-        return `Для відправки потрібно взяти дані доставки: спосіб отримання (почтомат або адреса), імʼя та прізвище отримувача, телефон, країна, місто, вулиця, номер будинку/квартири, поштовий індекс.
-
-Якщо доставка ще не оплачена, спочатку надсилаємо суму та реквізити, а відправляємо тільки після оплати. За доставку відповідальності не несемо; якщо посилка не дійде, у більшості випадків вона повертається до нас.`;
-      }
-
-      return '';
     }
 
     function hasAny(text, words) {

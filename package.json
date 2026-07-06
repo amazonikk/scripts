@@ -1,0 +1,17 @@
+{
+  "name": "notion-ai-knowledge-base",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Internal AI knowledge base MVP for managers with Notion sync and Gemini answers.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "sync": "node server.js --sync"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@notionhq/client": "^2.2.17",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2"
+  }
+}
