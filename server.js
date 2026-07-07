@@ -1028,6 +1028,7 @@ function splitText(text, maxChars = 900, overlap = 120) {
 async function answerFromIndex({ index, question, section = null, language, debug = false, mode: providedMode = null }) {
   const fallback = getFallbackAnswer(language);
   const mode = providedMode || buildQuestionMode(question);
+  const isEnglish = normalizeLanguage(language) === 'en';
   const retrievalQueries = buildRetrievalQueries(question, mode, language);
   const isCompoundQuestion = retrievalQueries.length > 1;
   const sectionLimit = getRetrievalSectionLimit(question, language, mode);
@@ -1055,10 +1056,13 @@ async function answerFromIndex({ index, question, section = null, language, debu
        const pageId = chunk.pageId;
        const maxScore = maxPageScores.get(pageId) || 0;
        let boost = 0;
-       if (maxScore >= 10) {
-         boost = maxScore;
+       const boostThreshold = isEnglish ? 6 : 10;
+       if (maxScore >= boostThreshold) {
+         boost = isEnglish ? (maxScore + 10) : maxScore;
          const cleanText = String(chunk.text || '').trim();
-         const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
+         const isBullet = isEnglish 
+           ? /^[—\-*•❓👉🟢🟡🟠🔴✅⛔👶🚛🔄🔵❌]/.test(cleanText)
+           : (cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•'));
          if (isBullet) {
            boost += 8;
          }
@@ -1128,10 +1132,13 @@ async function answerFromIndex({ index, question, section = null, language, debu
     const pageId = chunk.pageId;
     const maxScore = maxPageScores.get(pageId) || 0;
     let boost = 0;
-    if (maxScore >= 10) {
-      boost = maxScore;
+    const boostThreshold = isEnglish ? 6 : 10;
+    if (maxScore >= boostThreshold) {
+      boost = isEnglish ? (maxScore + 10) : maxScore;
       const cleanText = String(chunk.text || '').trim();
-      const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
+      const isBullet = isEnglish
+        ? /^[—\-*•❓👉🟢🟡🟠🔴✅⛔👶🚛🔄🔵❌]/.test(cleanText)
+        : (cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•'));
       if (isBullet) {
         boost += 8;
       }
@@ -1185,10 +1192,13 @@ async function answerFromIndex({ index, question, section = null, language, debu
       const pageId = chunk.pageId;
       const maxScore = maxFallbackPageScores.get(pageId) || 0;
       let boost = 0;
-      if (maxScore >= 10) {
-        boost = maxScore;
+      const boostThreshold = isEnglish ? 6 : 10;
+      if (maxScore >= boostThreshold) {
+        boost = isEnglish ? (maxScore + 10) : maxScore;
         const cleanText = String(chunk.text || '').trim();
-        const isBullet = cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•');
+        const isBullet = isEnglish
+          ? /^[—\-*•❓👉🟢🟡🟠🔴✅⛔👶🚛🔄🔵❌]/.test(cleanText)
+          : (cleanText.startsWith('—') || cleanText.startsWith('-') || cleanText.startsWith('*') || cleanText.startsWith('•'));
         if (isBullet) {
           boost += 8;
         }
@@ -1934,10 +1944,11 @@ function getRetrievalSectionLimit(question, language, mode) {
   if (mode === 'client_reply') return 8;
 
   const matchedGroups = detectRetrievalIntents(question, language, mode).length;
+  const isEnglish = normalizeLanguage(language) === 'en';
 
-  if (matchedGroups >= 2) return 14;
-  if (matchedGroups === 1) return 12;
-  return 10;
+  if (matchedGroups >= 2) return isEnglish ? 20 : 14;
+  if (matchedGroups === 1) return isEnglish ? 18 : 12;
+  return isEnglish ? 16 : 10;
 }
 
 function selectTopicChunks(chunks, question, language, maxPerTopic = 4) {
@@ -2032,15 +2043,7 @@ function dedupeChunks(chunks) {
 function getCrossLanguageRetrievalTerms(language) {
   const selectedLanguage = normalizeLanguage(language);
   const base = {
-    en: [
-      'documents', 'required documents', 'price', 'cost', 'fee',
-      'address', 'location', 'office', 'contacts',
-      'deadline', 'deadlines', 'processing time',
-      'conditions', 'requirements',
-      'remote', 'online', 'without travel', 'without visit', 'no travel', 'no visit',
-      'instruction', 'instructions', 'how to', 'what to do',
-      'what to reply', 'what should we reply', 'reply to the client', 'ready-made reply'
-    ],
+    en: [],
     ru: [],
     ua: []
   };
@@ -2137,6 +2140,44 @@ function scoreTextOverlap(text, tokens) {
   return score;
 }
 
+function stemEnglish(word) {
+  let w = word.toLowerCase();
+  if (w.length <= 3) return w;
+  
+  if (w.endsWith("'s")) w = w.slice(0, -2);
+  else if (w.endsWith("s'")) w = w.slice(0, -2);
+  
+  if (w.endsWith("ies") && !w.endsWith("eies") && !w.endsWith("aies")) {
+    w = w.slice(0, -3) + "y";
+  } else if (w.endsWith("es") && !w.endsWith("aes") && !w.endsWith("ees") && !w.endsWith("oes")) {
+    w = w.slice(0, -2);
+  } else if (w.endsWith("s") && !w.endsWith("ss") && !w.endsWith("us") && !w.endsWith("is") && !w.endsWith("as")) {
+    w = w.slice(0, -1);
+  }
+  
+  if (w.endsWith("ing")) {
+    w = w.slice(0, -3);
+    if (w.endsWith("at") || w.endsWith("bl") || w.endsWith("iz")) {
+      w += "e";
+    } else if (w.endsWith("bb") || w.endsWith("dd") || w.endsWith("ff") || w.endsWith("gg") || w.endsWith("mm") || w.endsWith("nn") || w.endsWith("pp") || w.endsWith("rr") || w.endsWith("tt")) {
+      w = w.slice(0, -1);
+    }
+  } else if (w.endsWith("ed")) {
+    w = w.slice(0, -2);
+    if (w.endsWith("at") || w.endsWith("bl") || w.endsWith("iz")) {
+      w += "e";
+    } else if (w.endsWith("bb") || w.endsWith("dd") || w.endsWith("ff") || w.endsWith("gg") || w.endsWith("mm") || w.endsWith("nn") || w.endsWith("pp") || w.endsWith("rr") || w.endsWith("tt")) {
+      w = w.slice(0, -1);
+    }
+  }
+  
+  if (w.endsWith("ly")) {
+    w = w.slice(0, -2);
+  }
+  
+  return w;
+}
+
 function tokenize(value) {
   const stopWords = new Set([
     'and', 'the', 'for', 'with', 'that', 'this', 'from', 'what', 'when', 'where',
@@ -2156,6 +2197,24 @@ function tokenize(value) {
       expanded.push(...['chip', 'чип', 'чіп'].filter(t => t !== token));
     } else if (token === 'card' || token === 'карт' || token === 'картк') {
       expanded.push(...['card', 'карт', 'картк'].filter(t => t !== token));
+    } else if (token === 'debtor' || token === 'debt') {
+      expanded.push('должн', 'долг', 'боржн', 'борг');
+    } else if (token === 'short' || token === 'long') {
+      if (token === 'short') expanded.push('коротк');
+      if (token === 'long') expanded.push('длинн', 'тривал');
+    } else if (token === 'course') {
+      expanded.push('курс');
+    } else if (token === 'category') {
+      expanded.push('категор');
+    } else if (token === 'office' || token === 'visit' || token === 'location') {
+      expanded.push('офис', 'приезд', 'приїзд', 'варшав');
+    } else if (token === 'medical' || token === 'psychological' || token === 'psychotechnical') {
+      expanded.push('мед', 'псих');
+    } else if (token === 'remote' || token === 'online') {
+      expanded.push('удаленн', 'онлайн', 'віддален');
+    } else if (token === 'rule' || token === 'rules' || token === 'stop') {
+      if (token === 'rule' || token === 'rules') expanded.push('правил');
+      if (token === 'stop') expanded.push('стоп');
     }
   }
   return expanded;
@@ -2181,6 +2240,9 @@ function normalizeIntentText(value) {
 function stemToken(value) {
   let token = normalize(value);
   if (!token) return '';
+  if (/^[a-z]+$/i.test(token)) {
+    return stemEnglish(token);
+  }
 
   const reflexive = ['ся', 'сь'];
   const verbEndings = [
