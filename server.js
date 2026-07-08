@@ -74,7 +74,7 @@ ensureDbTables().catch(err => console.error('Database init error:', err));
 
 // Auth Middleware
 function checkAuth(req, res, next) {
-  const PUBLIC_PATHS = ['/login', '/register', '/login.html', '/favicon.ico', '/google-login'];
+  const PUBLIC_PATHS = ['/login', '/register', '/login.html', '/favicon.ico', '/google-login', '/notipn.png'];
   if (PUBLIC_PATHS.includes(req.path)) {
     return next();
   }
