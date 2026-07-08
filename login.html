@@ -348,11 +348,7 @@
         <button type="submit" class="btn" id="submit-btn">Sign In</button>
       </form>
 
-      <div class="divider">or</div>
-      <button type="button" class="btn-google" onclick="handleGoogleLogin()">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
-        Continue with Google
-      </button>
+
     </div>
   </div>
 
@@ -446,33 +442,7 @@
       }
     }
 
-    async function handleGoogleLogin() {
-      const msgBox = document.getElementById('feedback-msg');
-      msgBox.className = 'message';
-      msgBox.innerText = '';
-      
-      try {
-        const response = await fetch('/google-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-          msgBox.classList.add('success');
-          msgBox.innerText = 'Authenticated via Google! Redirecting...';
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 800);
-        } else {
-          msgBox.classList.add('error');
-          msgBox.innerText = data.error || 'Google login failed.';
-        }
-      } catch (err) {
-        msgBox.classList.add('error');
-        msgBox.innerText = 'Network error.';
-      }
-    }
+
   </script>
 </body>
 </html>

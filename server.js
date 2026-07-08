@@ -74,7 +74,7 @@ ensureDbTables().catch(err => console.error('Database init error:', err));
 
 // Auth Middleware
 function checkAuth(req, res, next) {
-  const PUBLIC_PATHS = ['/login', '/register', '/login.html', '/favicon.ico', '/google-login', '/notipn.png'];
+  const PUBLIC_PATHS = ['/login', '/register', '/login.html', '/favicon.ico', '/notipn.png'];
   if (PUBLIC_PATHS.includes(req.path)) {
     return next();
   }
@@ -170,43 +170,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/google-login', async (req, res) => {
-  if (!dbPool) {
-    return res.status(500).json({ error: 'Database is not configured on the server.' });
-  }
 
-  try {
-    const email = 'google.user@company.com';
-    const defaultPass = 'google_pass_123';
-    
-    // Check if user exists
-    let result = await dbPool.query('SELECT * FROM users WHERE email = $1', [email]);
-    let user = result.rows[0];
-    
-    if (!user) {
-      // Create default Google user
-      const passwordHash = await bcrypt.hash(defaultPass, 10);
-      const insertResult = await dbPool.query(
-        'INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING *',
-        [email, passwordHash, 'admin']
-      );
-      user = insertResult.rows[0];
-    }
-    
-    // Sign token
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-    
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 24 * 60 * 60 * 1000
-    });
-    
-    res.json({ ok: true, message: 'Logged in with Google successfully.' });
-  } catch (error) {
-    res.status(500).json({ error: error.message || 'Google login failed.' });
-  }
-});
 
 app.post('/logout', (req, res) => {
   res.clearCookie('token');
