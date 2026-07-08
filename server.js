@@ -105,6 +105,10 @@ app.get('/login.html', (req, res) => {
   res.sendFile(path.join(ROOT_DIR, 'login.html'));
 });
 
+app.get('/notipn.png', (req, res) => {
+  res.sendFile(path.join(ROOT_DIR, 'notipn.png'));
+});
+
 app.post('/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
