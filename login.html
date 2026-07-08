@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notion Knowledge Base - Login</title>
+  <link rel="icon" type="image/png" href="/notipn.png">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -33,7 +34,7 @@
       flex-direction: column;
       justify-content: flex-start;
       align-items: center;
-      padding-top: 60px; /* Lifted higher */
+      padding-top: 50px; /* Lifted higher */
       overflow: hidden;
       position: relative;
     }
@@ -81,7 +82,7 @@
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-radius: 24px;
-      padding: 35px 30px;
+      padding: 30px 25px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
@@ -92,7 +93,15 @@
 
     .header {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
+    }
+
+    .logo-img {
+      width: 80px;
+      height: 80px;
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+      margin-bottom: 15px;
     }
 
     .logo {
@@ -101,7 +110,7 @@
       background: linear-gradient(135deg, #34d399 0%, #059669 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       letter-spacing: -0.5px;
     }
 
@@ -117,7 +126,7 @@
       background: rgba(0, 0, 0, 0.2);
       border-radius: 12px;
       padding: 4px;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
@@ -143,7 +152,7 @@
 
     /* Form Fields */
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       position: relative;
     }
 
@@ -152,7 +161,7 @@
       font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -174,6 +183,29 @@
       border-color: var(--accent-color);
       box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
       background: rgba(0, 0, 0, 0.4);
+    }
+
+    .password-container {
+      position: relative;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    .toggle-password:hover {
+      color: var(--text-color);
     }
 
     .btn {
@@ -278,6 +310,7 @@
   <div class="container">
     <div class="card">
       <div class="header">
+        <img class="logo-img" src="/notipn.png" alt="Notion RAG Logo" onerror="this.style.display='none'">
         <div class="logo">Notion RAG</div>
         <div class="subtitle">Access the Knowledge Base</div>
       </div>
@@ -296,11 +329,21 @@
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" required placeholder="••••••••">
+          <div class="password-container">
+            <input type="password" id="password" required placeholder="••••••••">
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
         </div>
         <div class="form-group" id="confirm-password-group" style="display: none;">
           <label for="confirm-password">Confirm Password</label>
-          <input type="password" id="confirm-password" placeholder="••••••••">
+          <div class="password-container">
+            <input type="password" id="confirm-password" placeholder="••••••••">
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirm-password', this)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn" id="submit-btn">Sign In</button>
       </form>
@@ -315,6 +358,18 @@
 
   <script>
     let currentMode = 'login';
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      
+      if (isPassword) {
+        btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+      } else {
+        btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      }
+    }
 
     function switchTab(mode) {
       currentMode = mode;
