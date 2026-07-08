@@ -770,7 +770,7 @@
           <h1>Готові відповіді для клієнтів</h1>
           <p class="lead">Менеджер обирає послугу або ситуацію, швидко знаходить потрібний текст, за потреби підставляє свої дані та копіює повідомлення в месенджер.</p>
         </div>
-        <div class="status-card">
+        <button onclick="logout()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-family:inherit; box-shadow: 0 4px 12px rgba(239,68,68,0.2); height:fit-content; white-space:nowrap; margin-right:15px;">Выйти</button><div class="status-card">
           <strong>Головне правило</strong>
           <p>Якщо ситуації немає в скриптах, менеджер пише відповідь самостійно, перевіряє її по правилах і для перекладу на іншу мову використовує ChatGPT.</p>
         </div>
@@ -3436,6 +3436,18 @@ Lütfen şunları gönderin:
     renderPrices();
     renderCustom();
     renderKnowledgeInterface();
+
+async function logout() {
+  try {
+    const response = await fetch('/logout', { method: 'POST' });
+    if (response.ok) {
+      window.location.href = '/login.html';
+    }
+  } catch (err) {
+    console.error('Logout failed:', err);
+  }
+}
+
   </script>
 </body>
 </html>

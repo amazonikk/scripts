@@ -34,6 +34,143 @@ let indexCache = null;
 
 app.use(express.json({ limit: '2mb' }));
 
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { Pool } = require('pg');
+
+app.use(cookieParser());
+
+const JWT_SECRET = process.env.JWT_SECRET || 'notion_api_secret_key_123';
+
+let dbPool = null;
+if (process.env.DATABASE_URL) {
+  dbPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL.includes('sslmode=') ? { rejectUnauthorized: false } : false
+  });
+}
+
+async function ensureDbTables() {
+  if (!dbPool) return;
+  const client = await dbPool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } catch (err) {
+    console.error('Error creating database tables:', err);
+  } finally {
+    client.release();
+  }
+}
+
+ensureDbTables().catch(err => console.error('Database init error:', err));
+
+// Auth Middleware
+function checkAuth(req, res, next) {
+  const PUBLIC_PATHS = ['/login', '/register', '/login.html', '/favicon.ico'];
+  if (PUBLIC_PATHS.includes(req.path)) {
+    return next();
+  }
+  
+  const token = req.cookies?.token;
+  if (!token) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({ error: 'Unauthorized. Please login.' });
+    }
+    return res.redirect('/login.html');
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({ error: 'Session expired. Please login again.' });
+    }
+    res.redirect('/login.html');
+  }
+}
+
+app.use(checkAuth);
+
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(ROOT_DIR, 'login.html'));
+});
+
+app.post('/register', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  
+  if (!dbPool) {
+    return res.status(500).json({ error: 'Database is not configured on the server.' });
+  }
+  
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    await dbPool.query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2)',
+      [email, passwordHash]
+    );
+    res.json({ ok: true, message: 'User registered successfully.' });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'User with this email already exists.' });
+    }
+    res.status(500).json({ error: error.message || 'Registration failed.' });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  
+  if (!dbPool) {
+    return res.status(500).json({ error: 'Database is not configured on the server.' });
+  }
+  
+  try {
+    const result = await dbPool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+    
+    const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+    
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+    
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    
+    res.json({ ok: true, message: 'Logged in successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Login failed.' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ ok: true, message: 'Logged out successfully.' });
+});
+
 app.get('/', async (_req, res) => {
   res.sendFile(path.join(ROOT_DIR, 'index.html'));
 });
@@ -2331,6 +2468,66 @@ function getMissingEnvKeys() {
   return missing;
 }
 
+async function callGenerativeAI(contents, systemInstruction, config) {
+  const orchestratorUrl = process.env.GEMINI_ORCHESTRATOR_URL;
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  
+  if (orchestratorUrl) {
+    try {
+      console.log(`Routing query to AI Orchestrator: ${orchestratorUrl}`);
+      const payload = {
+        model: modelName,
+        contents: contents,
+        priority: 3, // Notion RAG has lower priority than HeyGen script adaptation
+        config: {
+          temperature: config?.temperature ?? 0,
+          responseMimeType: config?.responseMimeType,
+          thinkingConfig: config?.thinkingConfig,
+          systemInstruction: systemInstruction
+        }
+      };
+      
+      const response = await fetch(`${orchestratorUrl}/v1/ai/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Orchestrator error: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      if (data.status === 'success') {
+        return {
+          text: () => data.text,
+          usageMetadata: data.usage_metadata
+        };
+      } else {
+        throw new Error(data.error || 'Unknown orchestrator error');
+      }
+    } catch (err) {
+      console.error('Failed to query AI Orchestrator, falling back to direct Gemini API call:', err);
+    }
+  }
+
+  // Fallback to direct call
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    systemInstruction
+  });
+  const result = await model.generateContent({
+    contents,
+    generationConfig: config
+  });
+  return {
+    text: () => result.response.text(),
+    usageMetadata: result.response.usageMetadata
+  };
+}
+
 async function generateGeminiAnswer({ question, context, language, fallback }) {
   const selectedLanguage = normalizeLanguage(language);
   const localizedFallback = fallback || getFallbackAnswer(selectedLanguage);
@@ -2358,31 +2555,23 @@ async function generateGeminiAnswer({ question, context, language, fallback }) {
     'Do not change the response language. Answer in the same language as the user\'s question.'
   ].join(' ');
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction
-  });
-
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: `QUESTION:\n${question}\n\nCONTEXT:\n${context}`
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0,
-      topP: 1,
-      maxOutputTokens: 1600
+  const contents = [
+    {
+      role: 'user',
+      parts: [
+        {
+          text: `QUESTION:\n${question}\n\nCONTEXT:\n${context}`
+        }
+      ]
     }
-  });
-
-  return result.response.text();
+  ];
+  const config = {
+    temperature: 0,
+    topP: 1,
+    maxOutputTokens: 1600
+  };
+  const result = await callGenerativeAI(contents, systemInstruction, config);
+  return result.text();
 }
 
 async function generateGeminiAnswerV2({ question, context, language, fallback, mode = 'fact' }) {
@@ -2440,31 +2629,23 @@ async function generateGeminiAnswerV2({ question, context, language, fallback, m
     'Before finalizing, do a silent self-check that every question part has been addressed and that no unsupported claim was added.'
   ].join(' ');
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    systemInstruction
-  });
-
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: `QUESTION:\n${question}\n\nCONTEXT:\n${context}`
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0,
-      topP: 1,
-      maxOutputTokens: 3000
+  const contents = [
+    {
+      role: 'user',
+      parts: [
+        {
+          text: `QUESTION:\n${question}\n\nCONTEXT:\n${context}`
+        }
+      ]
     }
-  });
-
-  return sanitizeGeminiAnswer(result.response.text());
+  ];
+  const config = {
+    temperature: 0,
+    topP: 1,
+    maxOutputTokens: 3000
+  };
+  const result = await callGenerativeAI(contents, systemInstruction, config);
+  return sanitizeGeminiAnswer(result.text());
 }
 
 function sanitizeGeminiAnswer(answer) {
