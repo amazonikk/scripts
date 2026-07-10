@@ -51,8 +51,45 @@ if (process.env.DATABASE_URL) {
   });
 }
 
+
+// --- DB helper functions & Local JSON user storage fallback ---
+const USERS_JSON_PATH = path.join(DATA_DIR, 'users.json');
+
+async function loadUsers() {
+  try {
+    const data = await fs.readFile(USERS_JSON_PATH, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+}
+
+async function saveUsers(users) {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(USERS_JSON_PATH, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving local users JSON:', e);
+  }
+}
+
+
 async function ensureDbTables() {
-  if (!dbPool) return;
+  if (!dbPool) {
+    // Initialize local JSON storage fallback
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      try {
+        await fs.access(USERS_JSON_PATH);
+      } catch {
+        await fs.writeFile(USERS_JSON_PATH, JSON.stringify([], null, 2), 'utf-8');
+      }
+      console.log('[Notion RAG Local] Local users.json storage initialized.');
+    } catch (e) {
+      console.error('[Notion RAG Local] Error initializing JSON fallback:', e.message);
+    }
+    return;
+  }
   const client = await dbPool.connect();
   try {
     await client.query(`
@@ -60,9 +97,19 @@ async function ensureDbTables() {
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'user',
+        status VARCHAR(50) NOT NULL DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    // DB migration: ensure role and status columns exist
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'user';
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'pending';
+    `);
+    console.log('[Notion RAG DB] Tables initialized.');
   } catch (err) {
     console.error('Error creating database tables:', err);
   } finally {
@@ -110,22 +157,58 @@ app.get('/notipn.png', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
   
+  const emailLower = email.toLowerCase();
+  // Auto-approve ONLY whitelisted admin email addresses
+  const initialStatus = (emailLower === 'mira.klimovitch@gmail.com' || emailLower === 'admin@notionapi.com') ? 'approved' : 'pending';
+  const initialRole = (emailLower === 'mira.klimovitch@gmail.com' || emailLower === 'admin@notionapi.com') ? 'admin' : (role || 'user');
+  
   if (!dbPool) {
-    return res.status(500).json({ error: 'Database is not configured on the server.' });
+    try {
+      const users = await loadUsers();
+      if (users.some(u => u.email.toLowerCase() === emailLower)) {
+        return res.status(400).json({ error: 'User with this email already exists.' });
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      const newUser = {
+        id: users.length + 1,
+        email: emailLower,
+        password_hash: passwordHash,
+        role: initialRole,
+        status: initialStatus,
+        created_at: new Date().toISOString()
+      };
+      users.push(newUser);
+      await saveUsers(users);
+      return res.json({ 
+        ok: true, 
+        message: initialStatus === 'approved' 
+          ? 'Registration successful! You are approved.' 
+          : 'Registration successful! Awaiting admin approval.',
+        status: initialStatus
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || 'Registration failed.' });
+    }
   }
   
   try {
     const passwordHash = await bcrypt.hash(password, 10);
     await dbPool.query(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2)',
-      [email, passwordHash]
+      'INSERT INTO users (email, password_hash, role, status) VALUES ($1, $2, $3, $4)',
+      [emailLower, passwordHash, initialRole, initialStatus]
     );
-    res.json({ ok: true, message: 'User registered successfully.' });
+    res.json({ 
+      ok: true, 
+      message: initialStatus === 'approved' 
+        ? 'Registration successful! You are approved.' 
+        : 'Registration successful! Awaiting admin approval.',
+      status: initialStatus
+    });
   } catch (error) {
     if (error.code === '23505') {
       return res.status(400).json({ error: 'User with this email already exists.' });
@@ -140,12 +223,42 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
   
+  const emailLower = email.toLowerCase();
+  
   if (!dbPool) {
-    return res.status(500).json({ error: 'Database is not configured on the server.' });
+    try {
+      const users = await loadUsers();
+      const user = users.find(u => u.email.toLowerCase() === emailLower);
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid email or password.' });
+      }
+      const match = await bcrypt.compare(password, user.password_hash);
+      if (!match) {
+        return res.status(400).json({ error: 'Invalid email or password.' });
+      }
+      
+      const userStatus = user.status || ((user.role === 'admin' || emailLower === 'mira.klimovitch@gmail.com') ? 'approved' : 'pending');
+      if (userStatus === 'pending') {
+        return res.status(403).json({ error: 'Ваша учетная запись ожидает одобрения администратором.' });
+      }
+      if (userStatus === 'rejected') {
+        return res.status(403).json({ error: 'Вход отклонен администратором.' });
+      }
+      
+      const token = jwt.sign({ id: user.id, email: user.email, role: user.role || 'user' }, JWT_SECRET, { expiresIn: '24h' });
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      return res.json({ ok: true, message: 'Logged in successfully.' });
+    } catch (e) {
+      return res.status(500).json({ error: e.message || 'Login failed.' });
+    }
   }
   
   try {
-    const result = await dbPool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await dbPool.query('SELECT * FROM users WHERE LOWER(email) = $1', [emailLower]);
     if (result.rows.length === 0) {
       return res.status(400).json({ error: 'Invalid email or password.' });
     }
@@ -156,7 +269,15 @@ app.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email or password.' });
     }
     
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+    const userStatus = user.status || ((user.role === 'admin' || emailLower === 'mira.klimovitch@gmail.com') ? 'approved' : 'pending');
+    if (userStatus === 'pending') {
+      return res.status(403).json({ error: 'Ваша учетная запись ожидает одобрения администратором.' });
+    }
+    if (userStatus === 'rejected') {
+      return res.status(403).json({ error: 'Вход отклонен администратором.' });
+    }
+    
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role || 'user' }, JWT_SECRET, { expiresIn: '24h' });
     
     res.cookie('token', token, {
       httpOnly: true,
@@ -167,6 +288,75 @@ app.post('/login', async (req, res) => {
     res.json({ ok: true, message: 'Logged in successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Login failed.' });
+  }
+});
+
+// --- Admin Panel API Endpoints ---
+app.get('/api/auth/me', (req, res) => {
+  if (!req.user) {
+    return res.json({ loggedIn: false });
+  }
+  res.json({
+    loggedIn: true,
+    email: req.user.email,
+    role: req.user.role || 'user'
+  });
+});
+
+app.get('/api/admin/pending', async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden. Admin role required.' });
+  }
+  
+  if (!dbPool) {
+    try {
+      const users = await loadUsers();
+      const pending = users.filter(u => u.status === 'pending').map(u => ({ email: u.email, role: u.role }));
+      return res.json({ pending });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+  
+  try {
+    const result = await dbPool.query("SELECT email, role FROM users WHERE status = 'pending' ORDER BY created_at DESC");
+    res.json({ pending: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/admin/decide', async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden. Admin role required.' });
+  }
+  
+  const { email, decision } = req.body;
+  if (!email || !['approved', 'rejected'].includes(decision)) {
+    return res.status(400).json({ error: 'Invalid parameters.' });
+  }
+  
+  const emailLower = email.toLowerCase();
+  
+  if (!dbPool) {
+    try {
+      const users = await loadUsers();
+      const user = users.find(u => u.email.toLowerCase() === emailLower);
+      if (user) {
+        user.status = decision;
+        await saveUsers(users);
+      }
+      return res.json({ ok: true });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+  
+  try {
+    await dbPool.query('UPDATE users SET status = $1 WHERE LOWER(email) = $2', [decision, emailLower]);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -794,6 +794,48 @@
         <div class="grid" id="cards"></div>
       </section>
 
+      <section class="section" id="approvals" style="display: none; padding: 24px;">
+        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--ink); font-family: inherit;">🔔 Одобрение регистрации</h2>
+        <p style="color: var(--muted); font-size: 14px; margin-bottom: 24px;">Список пользователей, ожидающих доступа к Notion RAG.</p>
+        <div id="pendingUsersList">
+          <div style="color: var(--muted); font-size: 14px;">Загрузка списка заявок...</div>
+        </div>
+      </section>
+
+      <style>
+        .approvals-card {
+          background: var(--surface);
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-family: inherit;
+          color: var(--ink);
+        }
+        .approvals-card code {
+          background: var(--surface-soft);
+          padding: 2px 6px;
+          border-radius: 4px;
+          border: 1px solid var(--line);
+        }
+        .approve-action-btn {
+          padding: 8px 12px;
+          border-radius: 6px;
+          border: none;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 13px;
+          font-family: inherit;
+          transition: opacity 0.2s;
+        }
+        .approve-action-btn:hover { opacity: 0.9; }
+        .btn-approve { background: var(--accent); color: white; margin-right: 8px; }
+        .btn-reject { background: var(--danger); color: white; }
+      </style>
+
       <section class="section" id="knowledge">
         <div class="knowledge-panel">
           <div class="knowledge-head">
@@ -3437,6 +3479,118 @@ Lütfen şunları gönderin:
     renderPrices();
     renderCustom();
     renderKnowledgeInterface();
+
+// --- Notion RAG Admin Pre-moderation & Auth check ---
+    let currentUser = null;
+
+    async function checkAuthStatus() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (data.loggedIn) {
+          currentUser = data;
+          
+          // Render logout and profile panel under the brand panel in sidebar
+          const brandPanel = document.querySelector('.brand');
+          if (brandPanel) {
+            brandPanel.insertAdjacentHTML('beforeend', `
+              <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; width: 100%; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; font-family: inherit;">
+                <span style="font-size: 11px; color: #9ca3af;">${currentUser.email} (${currentUser.role === 'admin' ? 'Admin' : 'User'})</span>
+                <button id="logoutBtn" style="background: transparent; border: none; color: #ef4444; font-size: 11px; cursor: pointer; font-weight: 600;">Выйти</button>
+              </div>
+            `);
+            
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+              await logout();
+            });
+          }
+
+          if (currentUser.role === 'admin') {
+            // Dynamically inject Approvals button in the nav list
+            if (!navItems.some(item => item.id === 'approvals')) {
+              navItems.push({ id: 'approvals', label: '🔔 Одобрения', count: 'новые', tone: 'warn' });
+              renderNav();
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Auth status query failed:", e);
+      }
+    }
+
+    async function loadPendingUsers() {
+      const listDiv = document.getElementById('pendingUsersList');
+      if (!listDiv) return;
+      
+      try {
+        const res = await fetch('/api/admin/pending');
+        const data = await res.json();
+        
+        if (!res.ok) {
+          listDiv.innerHTML = `<div style="color: var(--danger); font-size: 14px;">Ошибка: ${data.error || 'нет доступа'}</div>`;
+          return;
+        }
+        
+        const pending = data.pending || [];
+        if (pending.length === 0) {
+          listDiv.innerHTML = '<div style="color: var(--muted); font-size: 14px;">Нет активных заявок на модерацию. Все пользователи одобрены.</div>';
+          return;
+        }
+        
+        listDiv.innerHTML = pending.map(user => `
+          <div class="approvals-card">
+            <div>
+              <strong style="display: block; font-size: 15px; color: var(--ink);">${user.email}</strong>
+              <span style="font-size: 12px; color: var(--muted);">Роль: <code>${user.role}</code></span>
+            </div>
+            <div>
+              <button class="approve-action-btn btn-approve" data-email="${user.email}" data-action="approved">Одобрить</button>
+              <button class="approve-action-btn btn-reject" data-email="${user.email}" data-action="rejected">Отклонить</button>
+            </div>
+          </div>
+        `).join('');
+        
+        listDiv.querySelectorAll('.approve-action-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const email = e.target.getAttribute('data-email');
+            const decision = e.target.getAttribute('data-action');
+            try {
+              const actionRes = await fetch('/api/admin/decide', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, decision })
+              });
+              if (actionRes.ok) {
+                loadPendingUsers();
+              } else {
+                alert('Не удалось изменить статус пользователя.');
+              }
+            } catch {
+              alert('Сетевая ошибка при изменении статуса.');
+            }
+          });
+        });
+        
+      } catch (e) {
+        listDiv.innerHTML = '<div style="color: var(--danger); font-size: 14px;">Сетевая ошибка при загрузке заявок.</div>';
+      }
+    }
+
+    // Toggle approvals section when switching sections
+    const originalSetSection = setSection;
+    setSection = function(section) {
+      originalSetSection(section);
+      const approvalsSec = document.getElementById('approvals');
+      if (approvalsSec) {
+        approvalsSec.style.display = section === 'approvals' ? 'block' : 'none';
+      }
+      if (section === 'approvals') {
+        loadPendingUsers();
+      }
+    };
+
+    // Run auth status check on startup
+    checkAuthStatus();
 
 async function logout() {
   try {
