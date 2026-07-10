@@ -3434,8 +3434,394 @@ Lütfen şunları gönderin:
     renderCards();
     renderRules();
     renderPrices();
+
     renderCustom();
     renderKnowledgeInterface();
+
+    // --- Notion RAG Auth UI Injection & Logic ---
+    const authOverlayHtml = `
+<style>
+  #authOverlay {
+    position: fixed;
+    inset: 0;
+    background: #0b0f19;
+    z-index: 99999;
+    display: none;
+    place-items: center;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+  .auth-card {
+    background: rgba(17, 24, 39, 0.95);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: 24px;
+    padding: 40px;
+    width: 360px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 15px rgba(249, 115, 22, 0.1);
+    text-align: center;
+    backdrop-filter: blur(12px);
+  }
+  .auth-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #f3f4f6;
+  }
+  .auth-subtitle {
+    font-size: 14px;
+    color: #9ca3af;
+    margin-bottom: 24px;
+  }
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 12px;
+  }
+  .auth-tab {
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .auth-tab.active {
+    background: #f97316;
+    color: white;
+  }
+  .auth-input, .auth-select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    margin-bottom: 12px;
+    font-size: 14px;
+    outline: none;
+  }
+  .auth-input:focus, .auth-select:focus {
+    border-color: #f97316;
+  }
+  .auth-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: transform 0.1s;
+  }
+  .auth-btn:active {
+    transform: scale(0.98);
+  }
+  .auth-error {
+    color: #ef4444;
+    font-size: 13px;
+    margin-bottom: 12px;
+    text-align: left;
+    display: none;
+  }
+  .auth-success {
+    color: #22c55e;
+    font-size: 13px;
+    margin-bottom: 12px;
+    text-align: left;
+    display: none;
+  }
+  .approvals-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .approve-action-btn {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .btn-approve { background: #22c55e; color: white; margin-right: 8px; }
+  .btn-reject { background: #ef4444; color: white; }
+</style>
+
+<div id="authOverlay">
+  <div class="auth-card">
+    <div style="font-size: 32px; margin-bottom: 12px;">🔑</div>
+    <div class="auth-title">Amazonikk Desk</div>
+    <div class="auth-subtitle">Notion RAG База знань</div>
+    
+    <div id="authError" class="auth-error"></div>
+    <div id="authSuccess" class="auth-success"></div>
+    
+    <div class="auth-tabs">
+      <button id="tabLogin" class="auth-tab active" type="button">Вход</button>
+      <button id="tabRegister" class="auth-tab" type="button">Регистрация</button>
+    </div>
+    
+    <input id="authEmail" class="auth-input" type="email" placeholder="Электронная почта" />
+    <input id="authPassword" class="auth-input" type="password" placeholder="Пароль" />
+    <div id="registerExtra" style="display: none;">
+      <input id="authConfirm" class="auth-input" type="password" placeholder="Подтверждение пароля" />
+      <select id="authRole" class="auth-select">
+        <option value="user">Пользователь</option>
+        <option value="admin">Администратор (Admin)</option>
+      </select>
+    </div>
+    
+    <button id="authBtn" class="auth-btn" type="button">Войти</button>
+  </div>
+</div>
+`;
+
+    document.body.insertAdjacentHTML('beforeend', authOverlayHtml);
+
+    const appContainer = document.querySelector('.app');
+    if (appContainer) {
+      const knowledgeSection = document.getElementById('knowledge');
+      if (knowledgeSection && knowledgeSection.parentNode) {
+        knowledgeSection.parentNode.insertAdjacentHTML('beforeend', `
+          <div class="section" id="approvals" style="display: none; padding: 24px;">
+            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #f3f4f6;">🔔 Одобрение регистрации</h2>
+            <p style="color: #9ca3af; font-size: 14px; margin-bottom: 24px;">Список пользователей, ожидающих доступа к Notion RAG.</p>
+            <div id="pendingUsersList">
+              <div style="color: #9ca3af; font-size: 14px;">Загрузка списка заявок...</div>
+            </div>
+          </div>
+        `);
+      }
+    }
+
+    let currentUser = null;
+    let authMode = 'login';
+
+    const authOverlay = document.getElementById('authOverlay');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabRegister = document.getElementById('tabRegister');
+    const registerExtra = document.getElementById('registerExtra');
+    const authEmail = document.getElementById('authEmail');
+    const authPassword = document.getElementById('authPassword');
+    const authConfirm = document.getElementById('authConfirm');
+    const authRole = document.getElementById('authRole');
+    const authBtn = document.getElementById('authBtn');
+    const authError = document.getElementById('authError');
+    const authSuccess = document.getElementById('authSuccess');
+
+    tabLogin.addEventListener('click', () => {
+      authMode = 'login';
+      tabLogin.classList.add('active');
+      tabRegister.classList.remove('active');
+      registerExtra.style.display = 'none';
+      authBtn.textContent = 'Войти';
+      authError.style.display = 'none';
+      authSuccess.style.display = 'none';
+    });
+
+    tabRegister.addEventListener('click', () => {
+      authMode = 'register';
+      tabRegister.classList.add('active');
+      tabLogin.classList.remove('active');
+      registerExtra.style.display = 'block';
+      authBtn.textContent = 'Зарегистрироваться';
+      authError.style.display = 'none';
+      authSuccess.style.display = 'none';
+    });
+
+    authBtn.addEventListener('click', async () => {
+      authError.style.display = 'none';
+      authSuccess.style.display = 'none';
+      
+      const email = authEmail.value.trim();
+      const password = authPassword.value;
+      
+      if (!email || !password) {
+        authError.textContent = 'Заполните все поля.';
+        authError.style.display = 'block';
+        return;
+      }
+      
+      if (authMode === 'register') {
+        const confirm = authConfirm.value;
+        const role = authRole.value;
+        if (password !== confirm) {
+          authError.textContent = 'Пароли не совпадают.';
+          authError.style.display = 'block';
+          return;
+        }
+        
+        try {
+          const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, role })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            authSuccess.textContent = data.message || 'Регистрация успешна!';
+            authSuccess.style.display = 'block';
+            setTimeout(() => {
+              tabLogin.click();
+              authPassword.value = '';
+            }, 2000);
+          } else {
+            authError.textContent = data.error || 'Ошибка регистрации.';
+            authError.style.display = 'block';
+          }
+        } catch (e) {
+          authError.textContent = 'Сетевая ошибка при регистрации.';
+          authError.style.display = 'block';
+        }
+      } else {
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            authOverlay.style.display = 'none';
+            if (appContainer) appContainer.style.display = '';
+            window.location.reload();
+          } else {
+            authError.textContent = data.error || 'Неверные данные входа.';
+            authError.style.display = 'block';
+          }
+        } catch (e) {
+          authError.textContent = 'Сетевая ошибка при входе.';
+          authError.style.display = 'block';
+        }
+      }
+    });
+
+    async function checkAuthStatus() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (data.loggedIn) {
+          currentUser = data;
+          authOverlay.style.display = 'none';
+          if (appContainer) appContainer.style.display = '';
+          
+          const brandPanel = document.querySelector('.brand');
+          if (brandPanel) {
+            brandPanel.insertAdjacentHTML('beforeend', `
+              <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <span style="font-size: 11px; color: #9ca3af;">${currentUser.email} (${currentUser.role})</span>
+                <button id="logoutBtn" style="background: transparent; border: none; color: #ef4444; font-size: 11px; cursor: pointer; font-weight: 600;">Выйти</button>
+              </div>
+            `);
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              window.location.reload();
+            });
+          }
+
+          if (currentUser.role === 'admin') {
+            if (!navItems.some(item => item.id === 'approvals')) {
+              navItems.push({ id: 'approvals', label: '🔔 Одобрения', count: 'новые', tone: 'warn' });
+              renderNav();
+            }
+          }
+        } else {
+          authOverlay.style.display = 'grid';
+          if (appContainer) appContainer.style.display = 'none';
+        }
+      } catch (e) {
+        authOverlay.style.display = 'grid';
+        if (appContainer) appContainer.style.display = 'none';
+      }
+    }
+
+    async function loadPendingUsers() {
+      const listDiv = document.getElementById('pendingUsersList');
+      if (!listDiv) return;
+      
+      try {
+        const res = await fetch('/api/admin/pending');
+        const data = await res.json();
+        
+        if (!res.ok) {
+          listDiv.innerHTML = `<div style="color: #ef4444; font-size: 14px;">Ошибка: ${data.error || 'нет доступа'}</div>`;
+          return;
+        }
+        
+        const pending = data.pending || [];
+        if (pending.length === 0) {
+          listDiv.innerHTML = '<div style="color: #9ca3af; font-size: 14px;">Нет активных заявок на модерацию. Все пользователи одобрены.</div>';
+          return;
+        }
+        
+        listDiv.innerHTML = pending.map(user => `
+          <div class="approvals-card">
+            <div>
+              <strong style="display: block; font-size: 15px; color: #f3f4f6;">${user.email}</strong>
+              <span style="font-size: 12px; color: #9ca3af;">Роль: <code>${user.role}</code></span>
+            </div>
+            <div>
+              <button class="approve-action-btn btn-approve" data-email="${user.email}" data-action="approved">Одобрить</button>
+              <button class="approve-action-btn btn-reject" data-email="${user.email}" data-action="rejected">Отклонить</button>
+            </div>
+          </div>
+        `).join('');
+        
+        listDiv.querySelectorAll('.approve-action-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const email = e.target.getAttribute('data-email');
+            const decision = e.target.getAttribute('data-action');
+            try {
+              const actionRes = await fetch('/api/admin/decide', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, decision })
+              });
+              if (actionRes.ok) {
+                loadPendingUsers();
+              } else {
+                alert('Не удалось изменить статус пользователя.');
+              }
+            } catch {
+              alert('Сетевая ошибка при изменении статуса.');
+            }
+          });
+        });
+        
+      } catch (e) {
+        listDiv.innerHTML = '<div style="color: #ef4444; font-size: 14px;">Сетевая ошибка при загрузке заявок.</div>';
+      }
+    }
+
+    const originalSetSection = setSection;
+    setSection = function(section) {
+      originalSetSection(section);
+      const approvalsSec = document.getElementById('approvals');
+      if (approvalsSec) {
+        approvalsSec.style.display = section === 'approvals' ? 'block' : 'none';
+      }
+      if (section === 'approvals') {
+        loadPendingUsers();
+      }
+    };
+
+    checkAuthStatus();
+
   </script>
 </body>
 </html>

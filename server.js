@@ -4,6 +4,9 @@ const express = require('express');
 const dotenv = require('dotenv');
 const { Client: NotionClient } = require('@notionhq/client');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
+const pg = require('pg');
 
 dotenv.config();
 
@@ -32,7 +35,280 @@ const notionSourceType = notionRootPageId ? 'page' : (notionDatabaseId ? 'databa
 const notion = notionToken ? new NotionClient({ auth: notionToken }) : null;
 let indexCache = null;
 
+app.use(cookieParser('notion_secret_key_123'));
+app.use(cookieParser('notion_secret_key_123'));
 app.use(express.json({ limit: '2mb' }));
+
+// --- Database & Local JSON user storage ---
+const dbUrl = process.env.DATABASE_URL || '';
+let pool = null;
+
+if (dbUrl) {
+  pool = new pg.Pool({
+    connectionString: dbUrl
+  });
+}
+
+const USERS_JSON_PATH = path.join(DATA_DIR, 'users.json');
+
+async function initUserStorage() {
+  if (pool) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          role VARCHAR(50) NOT NULL DEFAULT 'user',
+          status VARCHAR(50) NOT NULL DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await pool.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'pending';
+      `);
+      console.log('[Notion RAG DB] PostgreSQL users table initialized.');
+    } catch (e) {
+      console.error('[Notion RAG DB] Error initializing PostgreSQL, falling back to JSON:', e.message);
+      pool = null;
+    }
+  }
+
+  if (!pool) {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      try {
+        await fs.access(USERS_JSON_PATH);
+      } catch {
+        await fs.writeFile(USERS_JSON_PATH, JSON.stringify([], null, 2), 'utf-8');
+      }
+      console.log('[Notion RAG Local] Local users.json initialized.');
+    } catch (e) {
+      console.error('[Notion RAG Local] Error initializing JSON storage:', e.message);
+    }
+  }
+}
+
+async function loadUsersFromJson() {
+  try {
+    const data = await fs.readFile(USERS_JSON_PATH, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+}
+
+async function saveUsersToJson(users) {
+  await fs.writeFile(USERS_JSON_PATH, JSON.stringify(users, null, 2), 'utf-8');
+}
+
+async function getUserByEmail(email) {
+  const emailLower = email.toLowerCase();
+  if (pool) {
+    const res = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [emailLower]);
+    return res.rows[0] || null;
+  } else {
+    const users = await loadUsersFromJson();
+    const user = users.find(u => u.email.toLowerCase() === emailLower);
+    if (user && !user.status) {
+      user.status = (user.role === 'admin' || emailLower === 'mira.klimovitch@gmail.com') ? 'approved' : 'pending';
+    }
+    return user || null;
+  }
+}
+
+async function createUser(email, passwordPlain, role = 'user') {
+  const emailLower = email.toLowerCase();
+  const passwordHash = await bcrypt.hash(passwordPlain, 10);
+  const status = (role === 'admin' || emailLower === 'mira.klimovitch@gmail.com') ? 'approved' : 'pending';
+  
+  if (pool) {
+    const res = await pool.query(
+      'INSERT INTO users (email, password_hash, role, status) VALUES ($1, $2, $3, $4) RETURNING *',
+      [emailLower, passwordHash, role, status]
+    );
+    return res.rows[0];
+  } else {
+    const users = await loadUsersFromJson();
+    if (users.some(u => u.email.toLowerCase() === emailLower)) {
+      throw new Error('User already exists');
+    }
+    const newUser = {
+      id: users.length + 1,
+      email: emailLower,
+      password_hash: passwordHash,
+      role,
+      status,
+      created_at: new Date().toISOString()
+    };
+    users.push(newUser);
+    await saveUsersToJson(users);
+    return newUser;
+  }
+}
+
+async function getPendingUsers() {
+  if (pool) {
+    const res = await pool.query("SELECT id, email, role, created_at FROM users WHERE status = 'pending' ORDER BY created_at DESC");
+    return res.rows;
+  } else {
+    const users = await loadUsersFromJson();
+    return users
+      .filter(u => u.status === 'pending')
+      .map(u => ({ id: u.id, email: u.email, role: u.role, created_at: u.created_at }));
+  }
+}
+
+async function updateUserStatus(email, status) {
+  const emailLower = email.toLowerCase();
+  if (pool) {
+    await pool.query('UPDATE users SET status = $1 WHERE LOWER(email) = $2', [status, emailLower]);
+  } else {
+    const users = await loadUsersFromJson();
+    const user = users.find(u => u.email.toLowerCase() === emailLower);
+    if (user) {
+      user.status = status;
+      await saveUsersToJson(users);
+    }
+  }
+}
+
+// Authentication Middlewares
+async function requireAuth(req, res, next) {
+  const email = req.signedCookies.notion_auth_token;
+  if (!email) {
+    return res.status(401).json({ error: 'Unauthorized. Please login.' });
+  }
+  try {
+    const user = await getUserByEmail(email);
+    if (!user || user.status !== 'approved') {
+      res.clearCookie('notion_auth_token');
+      return res.status(401).json({ error: 'Account is pending approval or disabled.' });
+    }
+    req.user = user;
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Auth validation failed.' });
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden. Admin role required.' });
+  }
+  next();
+}
+
+// --- Auth API Endpoints ---
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, role } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  try {
+    const existing = await getUserByEmail(email);
+    if (existing) {
+      return res.status(400).json({ error: 'User with this email already exists.' });
+    }
+    const user = await createUser(email, password, role || 'user');
+    res.json({
+      ok: true,
+      message: user.status === 'approved' 
+        ? 'Registration successful! You are approved.' 
+        : 'Registration successful! Awaiting admin approval.',
+      status: user.status
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Registration failed.' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  try {
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+    
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+    
+    if (user.status === 'pending') {
+      return res.status(403).json({ error: 'Ваша учетная запись ожидает одобрения администратором.' });
+    }
+    if (user.status === 'rejected') {
+      return res.status(403).json({ error: 'Вход отклонен администратором.' });
+    }
+    
+    res.cookie('notion_auth_token', user.email, {
+      signed: true,
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+    
+    res.json({
+      ok: true,
+      email: user.email,
+      role: user.role
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Login failed.' });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('notion_auth_token');
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  const email = req.signedCookies.notion_auth_token;
+  if (!email) {
+    return res.json({ loggedIn: false });
+  }
+  try {
+    const user = await getUserByEmail(email);
+    if (!user || user.status !== 'approved') {
+      res.clearCookie('notion_auth_token');
+      return res.json({ loggedIn: false });
+    }
+    res.json({
+      loggedIn: true,
+      email: user.email,
+      role: user.role
+    });
+  } catch {
+    res.json({ loggedIn: false });
+  }
+});
+
+app.get('/api/admin/pending', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const pending = await getPendingUsers();
+    res.json({ pending });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch pending users.' });
+  }
+});
+
+app.post('/api/admin/decide', requireAuth, requireAdmin, async (req, res) => {
+  const { email, decision } = req.body;
+  if (!email || !['approved', 'rejected'].includes(decision)) {
+    return res.status(400).json({ error: 'Invalid parameters.' });
+  }
+  try {
+    await updateUserStatus(email, decision);
+    res.json({ ok: true, message: `User status set to ${decision}.` });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user status.' });
+  }
+});
 
 app.get('/', async (_req, res) => {
   res.sendFile(path.join(ROOT_DIR, 'index.html'));
@@ -55,7 +331,7 @@ app.get('/api/health', async (_req, res) => {
   });
 });
 
-app.get('/api/sections', async (_req, res) => {
+app.get('/api/sections', requireAuth, async (_req, res) => {
   try {
     let index = await loadIndex();
     if (!index.sections.length && canSync()) {
@@ -90,7 +366,7 @@ app.get('/api/sections', async (_req, res) => {
   }
 });
 
-app.post('/api/sync', async (_req, res) => {
+app.post('/api/sync', requireAuth, async (_req, res) => {
   try {
     const index = await syncNotion();
     res.json({
@@ -110,7 +386,7 @@ app.post('/api/sync', async (_req, res) => {
   }
 });
 
-app.post('/api/ask', async (req, res) => {
+app.post('/api/ask', requireAuth, async (req, res) => {
   try {
     const question = String(req.body?.question || '').trim();
     const sectionId = String(req.body?.sectionId || '').trim();
@@ -156,6 +432,7 @@ async function main() {
     return;
   }
 
+  await initUserStorage();
   await ensureDataDir();
   await loadIndex();
   if (canSync()) {
@@ -263,6 +540,7 @@ function scoreSections(sections, query, mode = 'fact') {
 function selectRelevantSections(index, question, limit = 5, mode = 'fact') {
   const sectionScores = new Map();
   const sectionChunkCounts = new Map();
+  const isEnglishQuery = /^[a-z\s\?.,!'"]+$/i.test(question);
 
   for (const section of scoreSections(index.sections, question, mode)) {
     if (section.score > 0) {
@@ -276,7 +554,8 @@ function selectRelevantSections(index, question, limit = 5, mode = 'fact') {
     if (!section) continue;
     const current = sectionScores.get(section.id);
     if (!current && chunk.score < 4) continue;
-    const next = current || { ...section, score: 0 };
+    const next = current || { ...section, score: 0, maxScore: 0 };
+    next.maxScore = Math.max(next.maxScore, chunk.score);
     next.score += Math.max(chunk.score, 1);
     sectionScores.set(section.id, next);
     sectionChunkCounts.set(section.id, (sectionChunkCounts.get(section.id) || 0) + 1);
@@ -288,9 +567,12 @@ function selectRelevantSections(index, question, limit = 5, mode = 'fact') {
       const chunkCount = sectionChunkCounts.get(section.id) || 0;
       const specificityBonus = Math.min(14, (Number(section.depth || 0) * 1.5) + (pathDepth - 1) * 1.25);
       const breadthPenalty = Math.min(22, Math.max(0, chunkCount - 8) * 0.75);
+      
+      const baseVal = isEnglishQuery ? (section.maxScore + (section.score - section.maxScore) * 0.1) : section.score;
+      
       return {
         ...section,
-        score: section.score + specificityBonus - breadthPenalty
+        score: baseVal + specificityBonus - breadthPenalty
       };
     })
     .sort((a, b) => {
@@ -1174,7 +1456,7 @@ async function answerFromIndex({ index, question, section = null, language, debu
     const baseFallbackRanked = Array.from(fallbackRankMap.values())
       .map(chunk => ({
         ...chunk,
-        score: chunk.score + Math.min(6, Math.max(0, chunk.queryHits - 1) * 2)
+        score: chunk.score / queryPlans.length
       }));
 
     const maxFallbackPageScores = new Map();
@@ -1214,11 +1496,11 @@ async function answerFromIndex({ index, question, section = null, language, debu
       return aText.localeCompare(bText, 'uk');
     });
 
-    ranked = balanceChunksBySection(fallbackRankedAll, selectedSections, isCompoundQuestion ? 18 : 15).slice(0, isCompoundQuestion ? 80 : 60);
+    ranked = balanceChunksBySection(fallbackRankedAll, selectedSections, isEnglish ? 7 : (isCompoundQuestion ? 18 : 15)).slice(0, isEnglish ? (isCompoundQuestion ? 120 : 100) : (isCompoundQuestion ? 80 : 60));
     contextPool.splice(0, contextPool.length, ...dedupeChunks(ranked));
   }
 
-  const contextChunks = buildContextChunks(contextPool.length ? contextPool : (ranked.length ? ranked : sectionChunks), isCompoundQuestion ? 60 : 50, isCompoundQuestion ? 60000 : 50000);
+  const contextChunks = buildContextChunks(contextPool.length ? contextPool : (ranked.length ? ranked : sectionChunks), isEnglish ? 70 : (isCompoundQuestion ? 60 : 50), isEnglish ? 60000 : (isCompoundQuestion ? 60000 : 50000));
   const sourceChunks = dedupeSources(contextChunks);
 
   if (!contextChunks.length) {
@@ -1405,6 +1687,17 @@ function rankChunks(question, chunks, mode = 'fact') {
   const query = normalize(question);
   const intents = mode === 'client_reply' ? detectRetrievalIntents(question, null, mode) : [];
   const intentTerms = mode === 'client_reply' ? getIntentTerms() : {};
+  const isEnglishQuery = /^[a-z\s\?.,!'"]+$/i.test(question);
+  const commonDomainWords = new Set([
+    'driver', 'drivers', 'водитель', 'водители', 'водій', 'водії', 'вод', 'водител',
+    'question', 'questions', 'вопрос', 'вопросы', 'питан', 'питання',
+    'offer', 'offering', 'предложить', 'предложение', 'предлож',
+    'should', 'ask', 'before', 'after', 'about', 'need', 'needs', 'must',
+    'rules', 'rule', 'правила', 'правило', 'rejection', 'refusal', 'отказ',
+    'client', 'clients', 'клиент', 'клиенты', 'company', 'работа', 'work',
+    'have', 'has', 'you', 'your', 'with', 'from', 'what', 'when', 'where'
+  ]);
+
   return chunks
     .map(chunk => {
       const text = normalize(`${chunk.pageTitle} ${chunk.path} ${chunk.text}`);
@@ -1412,7 +1705,12 @@ function rankChunks(question, chunks, mode = 'fact') {
       if (text.includes(query) && query.length > 4) score += 20;
       for (const token of tokens) {
         if (text.includes(token)) {
-          score += token.length >= 6 ? 4 : 2;
+          if (isEnglishQuery) {
+            const isGeneric = commonDomainWords.has(token);
+            score += isGeneric ? 1 : 12;
+          } else {
+            score += token.length >= 6 ? 4 : 2;
+          }
         }
       }
       for (const intent of intents) {
@@ -2215,6 +2513,19 @@ function tokenize(value) {
     } else if (token === 'rule' || token === 'rules' || token === 'stop') {
       if (token === 'rule' || token === 'rules') expanded.push('правил');
       if (token === 'stop') expanded.push('стоп');
+    }
+    
+    // Translations
+    if (token === 'tachograph') {
+      expanded.push('тахограф');
+    } else if (token === 'driver') {
+      expanded.push('водител', 'водій', 'вод');
+    } else if (token === 'license' || token === 'licence') {
+      expanded.push('прав');
+    } else if (token === 'question') {
+      expanded.push('вопрос', 'питан');
+    } else if (token === 'offer') {
+      expanded.push('предлож');
     }
   }
   return expanded;
