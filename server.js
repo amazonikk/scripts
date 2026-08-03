@@ -442,6 +442,50 @@ app.post('/api/sync', async (_req, res) => {
     });
   }
 });
+// Throttle auto-sync checks: only check Notion API once every 10 seconds to avoid hammering API
+let lastNotionCheckTime = 0;
+const CHECK_THROTTLE_MS = 10000; // 10 seconds
+
+async function checkAndSyncIfUpdated() {
+  if (!canSync()) return;
+  const now = Date.now();
+  if (now - lastNotionCheckTime < CHECK_THROTTLE_MS) {
+    return;
+  }
+  lastNotionCheckTime = now;
+
+  try {
+    const index = await loadIndex();
+    if (!index.indexedAt) {
+      await syncNotion();
+      return;
+    }
+
+    const searchResponse = await notion.search({
+      sort: {
+        direction: 'descending',
+        timestamp: 'last_edited_time'
+      },
+      page_size: 1
+    });
+
+    if (searchResponse.results && searchResponse.results.length > 0) {
+      const mostRecentPage = searchResponse.results[0];
+      const lastEditedTime = mostRecentPage.last_edited_time;
+      if (lastEditedTime) {
+        const lastEditedMs = new Date(lastEditedTime).getTime();
+        const indexedMs = new Date(index.indexedAt).getTime();
+        if (lastEditedMs > indexedMs) {
+          console.log(`[notion-auto-sync] Detected change in Notion at ${lastEditedTime} (last index was ${index.indexedAt}). Syncing...`);
+          await syncNotion();
+        }
+      }
+    }
+  } catch (error) {
+    const details = formatErrorDetails(error);
+    console.error('[notion-auto-sync-check] Failed to check or sync updates:', `${details.name}: ${details.message}`);
+  }
+}
 
 app.post('/api/ask', async (req, res) => {
   try {
@@ -453,6 +497,8 @@ app.post('/api/ask', async (req, res) => {
       return res.status(400).json({ error: 'Question is required.' });
     }
     const questionMode = buildQuestionMode(question);
+
+    await checkAndSyncIfUpdated();
 
     let index = await loadIndex();
     if (!index.sections.length && canSync()) {
